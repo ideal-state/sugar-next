@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.jreleaser) apply false
 }
 
-group = "team.idealstate.minecraft"
+group = "team.idealstate.minecraft.next"
 version = "0.1.0-SNAPSHOT"
 
 subprojects {
@@ -47,6 +47,7 @@ subprojects {
         withJavadocJar()
 
         withInternal()
+        withShadow()
 
         withJUnitTest()
     }
