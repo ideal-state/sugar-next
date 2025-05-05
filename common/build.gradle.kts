@@ -4,7 +4,7 @@ dependencies {
     compileOnly(java(project, "tools"))
 
     internal(libs.asm)
-    internal(libs.jackson.databind)
+    internal(libs.snakeyaml)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
