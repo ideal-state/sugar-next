@@ -15,6 +15,9 @@ group = "team.idealstate.minecraft"
 version = "0.1.0-SNAPSHOT"
 
 subprojects {
+    if (!buildFile.exists()) {
+        return@subprojects
+    }
     apply {
         glass(JAVA)
         glass(PUBLISHING)
