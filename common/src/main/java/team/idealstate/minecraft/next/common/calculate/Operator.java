@@ -22,10 +22,10 @@ import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @Getter
 public enum Operator implements Symbol {
@@ -37,6 +37,13 @@ public enum Operator implements Symbol {
     POWER('^', 1);
 
     public static final int MIN_PRIORITY = Integer.MIN_VALUE;
+    public static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
+    private static final Set<Class<?>> INTEGER_CLASSES =
+            Collections.unmodifiableSet(
+                    new HashSet<>(
+                            Arrays.asList(Byte.class, Short.class, Integer.class, Long.class)));
+    private static final Set<Class<?>> DECIMAL_CLASSES =
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(Float.class, Double.class)));
     private final char symbol;
     private final int priority;
 
@@ -60,13 +67,8 @@ public enum Operator implements Symbol {
         }
     }
 
-    private static final Set<Class<?>> INTEGER_CLASSES =
-            Collections.unmodifiableSet(
-                    new HashSet<>(
-                            Arrays.asList(Byte.class, Short.class, Integer.class, Long.class)));
-
     @NotNull public static BigInteger asBigInteger(@NotNull Number number) {
-        Objects.requireNonNull(number, "number must not be null.");
+        Validation.notNull(number, "number must not be null.");
         if (number instanceof BigInteger) {
             return (BigInteger) number;
         }
@@ -77,11 +79,8 @@ public enum Operator implements Symbol {
         return new BigInteger(number.toString());
     }
 
-    private static final Set<Class<?>> DECIMAL_CLASSES =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(Float.class, Double.class)));
-
     @NotNull public static BigDecimal asBigDecimal(@NotNull Number number) {
-        Objects.requireNonNull(number, "number must not be null.");
+        Validation.notNull(number, "number must not be null.");
         if (number instanceof BigDecimal) {
             return (BigDecimal) number;
         }
@@ -91,8 +90,6 @@ public enum Operator implements Symbol {
         }
         return new BigDecimal(number.toString());
     }
-
-    public static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
 
     public Number calculate(Number first, Number second) {
         BigDecimal firstVal = asBigDecimal(first);

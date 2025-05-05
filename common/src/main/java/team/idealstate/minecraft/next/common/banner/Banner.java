@@ -23,7 +23,7 @@ import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public abstract class Banner {
     private static final String FILE_NAME = "/banner.txt";

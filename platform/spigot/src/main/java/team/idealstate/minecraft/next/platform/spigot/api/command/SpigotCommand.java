@@ -17,7 +17,6 @@
 package team.idealstate.minecraft.next.platform.spigot.api.command;
 
 import java.util.List;
-import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +26,14 @@ import org.bukkit.command.TabExecutor;
 import team.idealstate.minecraft.next.common.command.CommandContext;
 import team.idealstate.minecraft.next.common.command.CommandLine;
 import team.idealstate.minecraft.next.common.command.CommandResult;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SpigotCommand implements TabExecutor {
+
+    @NonNull private final CommandLine commandLine;
+    private final String failureMessage;
 
     @NotNull public static SpigotCommand of(@NotNull String name, @NotNull Object command) {
         return new SpigotCommand(CommandLine.of(name, command), null);
@@ -38,14 +41,11 @@ public final class SpigotCommand implements TabExecutor {
 
     @NotNull public static SpigotCommand of(
             @NotNull String name, @NotNull Object command, String failureMessage) {
-        Objects.requireNonNull(name, "name must not be null.");
-        Objects.requireNonNull(command, "command must not be null.");
+        Validation.notNull(name, "name must not be null.");
+        Validation.notNull(command, "command must not be null.");
         CommandLine commandLine = CommandLine.of(name, command);
         return new SpigotCommand(commandLine, failureMessage);
     }
-
-    @NonNull private final CommandLine commandLine;
-    private final String failureMessage;
 
     @Override
     public boolean onCommand(

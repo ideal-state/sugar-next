@@ -17,15 +17,15 @@
 package team.idealstate.minecraft.next.common.command;
 
 import java.util.List;
-import java.util.Objects;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface CommandLine {
 
     @NotNull static CommandLine of(@NotNull String name, @NotNull Object command) {
-        Objects.requireNonNull(name, "name must not be null.");
-        Objects.requireNonNull(command, "command must not be null.");
+        Validation.notNull(name, "name must not be null.");
+        Validation.notNull(command, "command must not be null.");
         return SimpleCommandLine.of(name, command);
     }
 
@@ -34,7 +34,7 @@ public interface CommandLine {
     }
 
     @NotNull static String validateName(@NotNull String name, @NotNull String parameterName) {
-        Objects.requireNonNull(name, "name must not be null.");
+        Validation.notNull(name, "name must not be null.");
         boolean header = true;
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);

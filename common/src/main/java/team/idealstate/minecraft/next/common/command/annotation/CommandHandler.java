@@ -43,16 +43,16 @@ public @interface CommandHandler {
      * 字面量参数必须在命令行的最前端部分 <br>
      * 必选参数使用 <code>{...}</code> 包裹
      *
-     * @see CommandLine#validateName(String)
      * @return 命令行的范式，为 "" 时使用方法名
+     * @see CommandLine#validateName(String)
      */
     String value() default "";
 
     /**
      * 命名规则为：<code>(a-zA-Z)[a-zA-Z0-9]*</code>
      *
-     * @see CommandLine#validateName(String)
      * @return 命令行的权限节点，为 {} 时使用 {@link #value()} 中的所有参数名称的顺序拼接（可能存在分隔符，通常分隔符为 '.'）
+     * @see CommandLine#validateName(String)
      */
     String[] permission() default {};
 

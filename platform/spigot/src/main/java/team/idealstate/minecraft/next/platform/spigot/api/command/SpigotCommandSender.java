@@ -16,7 +16,6 @@
 
 package team.idealstate.minecraft.next.platform.spigot.api.command;
 
-import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.NonNull;
@@ -24,17 +23,18 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.entity.Entity;
 import org.bukkit.permissions.Permissible;
 import team.idealstate.minecraft.next.common.command.CommandSender;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SpigotCommandSender implements CommandSender {
 
+    @NonNull private final Permissible holder;
+
     public static SpigotCommandSender of(@NotNull Permissible holder) {
-        Objects.requireNonNull(holder, "holder must not be null.");
+        Validation.notNull(holder, "holder must not be null.");
         return new SpigotCommandSender(holder);
     }
-
-    @NonNull private final Permissible holder;
 
     @Override
     public @NotNull UUID getUniqueId() {
@@ -51,7 +51,7 @@ public final class SpigotCommandSender implements CommandSender {
 
     @Override
     public boolean hasPermission(@NotNull String permission) {
-        Objects.requireNonNull(permission, "permission must not be null.");
+        Validation.notNull(permission, "permission must not be null.");
         return holder.hasPermission(permission);
     }
 }

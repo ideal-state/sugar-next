@@ -18,16 +18,16 @@ package team.idealstate.minecraft.next.common.command;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 final class SimpleCommandContext extends LinkedHashMap<String, Object> implements CommandContext {
     private static final long serialVersionUID = -1605421926443481109L;
     private final CommandSender sender;
 
     public SimpleCommandContext(CommandSender sender, Map<? extends String, ?> map) {
-        super(Objects.requireNonNull(map, "map must not be null."));
-        Objects.requireNonNull(sender, "sender must not be null.");
+        super(Validation.requireNotNull(map, "map must not be null."));
+        Validation.notNull(sender, "sender must not be null.");
         this.sender = sender;
     }
 

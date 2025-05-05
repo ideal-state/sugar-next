@@ -18,8 +18,8 @@ package team.idealstate.minecraft.next.common.command;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface CommandContext extends Map<String, Object> {
 
@@ -28,8 +28,8 @@ public interface CommandContext extends Map<String, Object> {
     }
 
     @NotNull static CommandContext of(@NotNull CommandSender sender, @NotNull Map<String, Object> map) {
-        Objects.requireNonNull(sender, "sender must not be null.");
-        Objects.requireNonNull(map, "map must not be null.");
+        Validation.notNull(sender, "sender must not be null.");
+        Validation.notNull(map, "map must not be null.");
         return new SimpleCommandContext(sender, map);
     }
 

@@ -16,9 +16,9 @@
 
 package team.idealstate.minecraft.next.common.logging;
 
-import java.util.Objects;
 import java.util.function.Supplier;
 import team.idealstate.minecraft.next.common.service.ServiceLoader;
+import team.idealstate.minecraft.next.common.validate.Validation;
 
 public abstract class Log {
 
@@ -74,7 +74,7 @@ public abstract class Log {
     }
 
     public static void setLevel(LogLevel level) {
-        LEVEL = Objects.requireNonNull(level, "Log level cannot be null.");
+        LEVEL = Validation.requireNotNull(level, "Log level cannot be null.");
     }
 
     public static void println(Supplier<String> messageProvider) {

@@ -341,9 +341,9 @@ public final class Expression implements Cloneable {
     /**
      * 使用空变量上下文的计算
      *
-     * @see Expression#calculate(Map)
      * @return 计算结果
      * @throws ExpressionException
+     * @see Expression#calculate(Map)
      */
     public Number calculate() throws ExpressionException {
         return calculate(Collections.emptyMap());

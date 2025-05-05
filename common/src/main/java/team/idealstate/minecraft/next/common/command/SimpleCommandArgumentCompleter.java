@@ -19,13 +19,13 @@ package team.idealstate.minecraft.next.common.command;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 final class SimpleCommandArgumentCompleter implements CommandArgument.Completer {
@@ -39,7 +39,7 @@ final class SimpleCommandArgumentCompleter implements CommandArgument.Completer 
             @NotNull CommandContext context, @NotNull String argument) {
         try {
             List<String> result = (List<String>) method.invoke(command, context, argument);
-            return Objects.requireNonNull(result, "completer result cannot be null.");
+            return Validation.requireNotNull(result, "completer result cannot be null.");
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new CommandException(e);
         }

@@ -22,12 +22,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.List;
-import java.util.Objects;
 import team.idealstate.minecraft.next.common.command.CommandContext;
 import team.idealstate.minecraft.next.common.command.example.ExampleCommand;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
-import team.idealstate.minecraft.next.common.validation.annotation.Nullable;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 
 /**
  * 用于标注命令行参数
@@ -40,8 +40,8 @@ import team.idealstate.minecraft.next.common.validation.annotation.Nullable;
 public @interface CommandArgument {
 
     /**
-     * @see CommandHandler#value() 参数命名规范（规则）遵循此处
      * @return 指定的命令参数名称，值为 "" 时将使用方法参数名称 （须要注意的是，方法的参数名称仅在编译器启用了特定参数 <code>-parameters</code> 时保留）
+     * @see CommandHandler#value() 参数命名规范（规则）遵循此处
      */
     String value() default "";
 
@@ -88,7 +88,7 @@ public @interface CommandArgument {
                 return null;
             }
             Class<?> targetType =
-                    Objects.requireNonNull(getTargetType(), "targetType must not be null.");
+                    Validation.requireNotNull(getTargetType(), "targetType must not be null.");
             if (targetType.isInstance(done)) {
                 return done;
             }

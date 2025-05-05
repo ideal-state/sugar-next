@@ -23,7 +23,7 @@ import team.idealstate.minecraft.next.common.command.CommandContext;
 import team.idealstate.minecraft.next.common.command.CommandResult;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public final class ExampleCommand {
 

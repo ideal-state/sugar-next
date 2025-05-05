@@ -19,12 +19,15 @@ package team.idealstate.minecraft.next.common.command;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public final class CommandResult {
+
+    private boolean success = false;
+    private String message = null;
 
     @NotNull public static CommandResult success() {
         return success(null);
@@ -41,7 +44,4 @@ public final class CommandResult {
     @NotNull public static CommandResult fail(String message) {
         return new CommandResult(false, message);
     }
-
-    private boolean success = false;
-    private String message = null;
 }

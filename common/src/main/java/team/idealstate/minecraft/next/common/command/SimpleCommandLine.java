@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
@@ -39,7 +38,8 @@ import lombok.RequiredArgsConstructor;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.Validation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 final class SimpleCommandLine implements CommandLine {
@@ -47,11 +47,19 @@ final class SimpleCommandLine implements CommandLine {
     public static final int ROOT_DEPTH = -1;
     public static final String ARGUMENTS_DELIMITER = " ";
     public static final String PERMISSION_DELIMITER = ".";
+    private final int depth;
+    @NonNull private final String name;
+    @NonNull private final List<String> permission;
+    private final boolean open;
+    private final CommandArgument.Converter<?> converter;
+    private final CommandArgument.Completer completer;
+    private final Deque<SimpleCommandLine> children = new ArrayDeque<>();
+    private CommandExecutor executor;
 
     @NotNull @SuppressWarnings({"rawtypes"})
     public static SimpleCommandLine of(@NotNull String name, @NotNull Object command) {
         CommandLine.validateName(name);
-        Objects.requireNonNull(command, "command must not be null.");
+        Validation.notNull(command, "command must not be null.");
         final AtomicReference<SimpleCommandLine> lazyRoot = new AtomicReference<>();
         CommandArgument.Completer completer =
                 (context, argument) -> {
@@ -221,7 +229,7 @@ final class SimpleCommandLine implements CommandLine {
     }
 
     public static String permissionOf(@NotNull List<String> permissionNodes) {
-        Objects.requireNonNull(permissionNodes, "permissionNodes must not be null.");
+        Validation.notNull(permissionNodes, "permissionNodes must not be null.");
         if (permissionNodes.isEmpty()) {
             return "";
         }
@@ -232,35 +240,6 @@ final class SimpleCommandLine implements CommandLine {
             return permissionNodes.get(0);
         }
         return String.join(PERMISSION_DELIMITER, permissionNodes);
-    }
-
-    private final int depth;
-    @NonNull private final String name;
-    @NonNull private final List<String> permission;
-    private final boolean open;
-    private CommandExecutor executor;
-    private final CommandArgument.Converter<?> converter;
-    private final CommandArgument.Completer completer;
-    private final Deque<SimpleCommandLine> children = new ArrayDeque<>();
-
-    @NotNull private SimpleCommandLine addChild(
-            @NotNull String name,
-            @NotNull List<String> permission,
-            boolean open,
-            CommandArgument.Converter<?> converter,
-            CommandArgument.Completer completer) {
-        Objects.requireNonNull(name, "name must not be null.");
-        Objects.requireNonNull(permission, "permission must not be null.");
-        SimpleCommandLine child =
-                new SimpleCommandLine(depth + 1, name, permission, open, converter, completer);
-        children.add(child);
-        return child;
-    }
-
-    private boolean accept(@NotNull CommandContext context, @NotNull String argument) {
-        return converter == null
-                ? getName().equalsIgnoreCase(argument)
-                : converter.canCovert(context, argument);
     }
 
     @NotNull private static List<SimpleCommandLine> accept(
@@ -306,6 +285,54 @@ final class SimpleCommandLine implements CommandLine {
         return accepted.get(key);
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean validate(@NotNull CommandContext context, @NotNull String... arguments) {
+        Validation.notNull(context, "context must not be null.");
+        Validation.notNull(arguments, "arguments must not be null.");
+        if (arguments.length == 0) {
+            return false;
+        }
+        for (String argument : arguments) {
+            Validation.notNull(argument, "argument must not be null.");
+        }
+        return true;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean validate(
+            @NotNull CommandSender sender, @NotNull List<String> permissionNodes, boolean open) {
+        Validation.notNull(sender, "sender must not be null.");
+        Validation.notNull(permissionNodes, "permissionNodes must not be null.");
+        if (open || sender.isAdministrator()) {
+            return true;
+        }
+        String permission = permissionOf(permissionNodes);
+        if (permission.isEmpty()) {
+            return true;
+        }
+        return sender.hasPermission(permission);
+    }
+
+    @NotNull private SimpleCommandLine addChild(
+            @NotNull String name,
+            @NotNull List<String> permission,
+            boolean open,
+            CommandArgument.Converter<?> converter,
+            CommandArgument.Completer completer) {
+        Validation.notNull(name, "name must not be null.");
+        Validation.notNull(permission, "permission must not be null.");
+        SimpleCommandLine child =
+                new SimpleCommandLine(depth + 1, name, permission, open, converter, completer);
+        children.add(child);
+        return child;
+    }
+
+    private boolean accept(@NotNull CommandContext context, @NotNull String argument) {
+        return converter == null
+                ? getName().equalsIgnoreCase(argument)
+                : converter.canCovert(context, argument);
+    }
+
     @Override
     public @NotNull String getName() {
         return name;
@@ -319,34 +346,6 @@ final class SimpleCommandLine implements CommandLine {
     @Override
     public boolean isOpen() {
         return open;
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private static boolean validate(@NotNull CommandContext context, @NotNull String... arguments) {
-        Objects.requireNonNull(context, "context must not be null.");
-        Objects.requireNonNull(arguments, "arguments must not be null.");
-        if (arguments.length == 0) {
-            return false;
-        }
-        for (String argument : arguments) {
-            Objects.requireNonNull(argument, "argument must not be null.");
-        }
-        return true;
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private static boolean validate(
-            @NotNull CommandSender sender, @NotNull List<String> permissionNodes, boolean open) {
-        Objects.requireNonNull(sender, "sender must not be null.");
-        Objects.requireNonNull(permissionNodes, "permissionNodes must not be null.");
-        if (open || sender.isAdministrator()) {
-            return true;
-        }
-        String permission = permissionOf(permissionNodes);
-        if (permission.isEmpty()) {
-            return true;
-        }
-        return sender.hasPermission(permission);
     }
 
     @Override

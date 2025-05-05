@@ -9,9 +9,7 @@
 ![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/ideal-state%2Fminecraft-next?branch=master&style=flat-square&label=Pipeline)
 ![GitLab Release](https://img.shields.io/gitlab/v/release/ideal-state%2Fminecraft-next?style=flat-square)
 
-
 ### [📖 使用文档](https://docs.idealstate.team/minecraft-next/) &ensp; [📢 贡献指南](https://docs.idealstate.team/guide/contribution/)
-
 
 ### ☑️ 如何构建
 

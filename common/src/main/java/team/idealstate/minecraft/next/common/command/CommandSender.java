@@ -17,7 +17,7 @@
 package team.idealstate.minecraft.next.common.command;
 
 import java.util.UUID;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface CommandSender {
 

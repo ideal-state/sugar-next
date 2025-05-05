@@ -18,7 +18,7 @@ package team.idealstate.minecraft.next.common.command;
 
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
-import team.idealstate.minecraft.next.common.validation.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 final class SimpleCommandArgumentConverter implements CommandArgument.Converter<String> {
 

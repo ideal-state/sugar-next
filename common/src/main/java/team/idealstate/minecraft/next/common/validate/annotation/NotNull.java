@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.validation.annotation;
+package team.idealstate.minecraft.next.common.validate.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

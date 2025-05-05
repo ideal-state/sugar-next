@@ -5,8 +5,8 @@
     <file type="web" url="file://$PROJECT_DIR$" />
   </component>
   <component name="NullableNotNullManager">
-    <option name="myDefaultNullable" value="team.idealstate.minecraft.next.common.validation.annotation.Nullable" />
-    <option name="myDefaultNotNull" value="team.idealstate.minecraft.next.common.validation.annotation.NotNull" />
+    <option name="myDefaultNullable" value="team.idealstate.minecraft.next.common.validate.annotation.Nullable" />
+    <option name="myDefaultNotNull" value="team.idealstate.minecraft.next.common.validate.annotation.NotNull" />
     <option name="myNullables">
       <value>
         <list size="17">
@@ -26,7 +26,7 @@
           <item index="13" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.Nullable" />
           <item index="14" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
           <item index="15" class="java.lang.String" itemvalue="org.jspecify.annotations.Nullable" />
-          <item index="16" class="java.lang.String" itemvalue="team.idealstate.minecraft.next.common.validation.annotation.Nullable" />
+          <item index="16" class="java.lang.String" itemvalue="team.idealstate.minecraft.next.common.validate.annotation.Nullable" />
         </list>
       </value>
     </option>
@@ -49,7 +49,7 @@
           <item index="13" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.NonNull" />
           <item index="14" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
           <item index="15" class="java.lang.String" itemvalue="org.jspecify.annotations.NonNull" />
-          <item index="16" class="java.lang.String" itemvalue="team.idealstate.minecraft.next.common.validation.annotation.NotNull" />
+          <item index="16" class="java.lang.String" itemvalue="team.idealstate.minecraft.next.common.validate.annotation.NotNull" />
         </list>
       </value>
     </option>
