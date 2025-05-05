@@ -14,7 +14,7 @@ dependencies {
     compileOnly(libs.spigot.api)
     compileOnly(libs.placeholderapi)
 
-    implementation(project(":${rootProject.name}-common"))
+    shadow(project(":${rootProject.name}-common"))
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
