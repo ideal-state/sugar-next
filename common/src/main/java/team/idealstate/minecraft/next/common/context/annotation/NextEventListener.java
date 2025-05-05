@@ -14,13 +14,15 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.plugin;
+package team.idealstate.minecraft.next.common.context.annotation;
 
-import java.io.File;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface NextPlugin {
-
-    String getName();
-
-    File getDataFolder();
-}
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface NextEventListener {}

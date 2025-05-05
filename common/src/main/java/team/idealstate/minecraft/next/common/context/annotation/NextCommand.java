@@ -14,9 +14,23 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.api;
+package team.idealstate.minecraft.next.common.context.annotation;
 
-import org.bukkit.plugin.java.JavaPlugin;
-import team.idealstate.minecraft.next.common.plugin.NextPlugin;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import team.idealstate.minecraft.next.common.command.CommandLine;
 
-public abstract class SpigotNextPlugin extends JavaPlugin implements NextPlugin {}
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface NextCommand {
+
+    /**
+     * @return 命令的主要名称（标识符），为 "" 时则使用类名
+     * @see CommandLine#validateName(String)
+     */
+    String value() default "";
+}
