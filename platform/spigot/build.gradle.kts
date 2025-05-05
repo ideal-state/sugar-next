@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    @Suppress("VulnerableLibrariesLocal", "RedundantSuppression")
     compileOnly(libs.spigot.api)
     compileOnly(libs.placeholderapi)
 
@@ -20,10 +21,11 @@ dependencies {
 }
 
 tasks.processResources {
-    val props = mapOf(
-        "project.name" to project.name,
-        "project.version" to project.version,
-    )
+    val props =
+        mapOf(
+            "name" to project.name,
+            "version" to project.version,
+        )
     filesMatching(listOf("plugin.yml")) {
         expand(props)
     }
