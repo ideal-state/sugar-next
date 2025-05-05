@@ -37,12 +37,12 @@ public interface Functional<T> {
     }
 
     @NotNull static <V> Lazy<V> lazy(V value) {
-        return new CachedLazy<>(value);
+        return Lazy.of(value);
     }
 
     @NotNull static <V> Lazy<V> lazy(@NotNull Provider<V> provider) {
         Validation.notNull(provider, "provider must not be null.");
-        return new CachedLazy<>(provider);
+        return Lazy.of(provider);
     }
 
     T it();

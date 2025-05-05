@@ -17,8 +17,17 @@
 package team.idealstate.minecraft.next.common.function;
 
 import team.idealstate.minecraft.next.common.function.closure.Provider;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface Lazy<V> extends Provider<V> {
+
+    static <V> Lazy<V> of(V value) {
+        return new CachedLazy<>(value);
+    }
+
+    static <V> Lazy<V> of(@NotNull Provider<V> provider) {
+        return new CachedLazy<>(provider);
+    }
 
     default V provide() {
         return get();

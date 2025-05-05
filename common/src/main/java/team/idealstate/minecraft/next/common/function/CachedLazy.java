@@ -20,7 +20,7 @@ import team.idealstate.minecraft.next.common.function.closure.Provider;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-class CachedLazy<V> implements Lazy<V> {
+final class CachedLazy<V> implements Lazy<V> {
 
     private volatile Provider<V> provider;
     private volatile V value;
