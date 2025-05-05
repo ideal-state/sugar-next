@@ -16,8 +16,6 @@
 
 package team.idealstate.minecraft.next.common.bytecode;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import team.idealstate.minecraft.next.common.bytecode.api.member.JavaClass;
 import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeException;
 import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingException;
@@ -28,18 +26,54 @@ import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 public interface Java<T> {
 
     @NotNull static JavaClass typeof(@NotNull Object object) throws BytecodeParsingException {
-        Validation.notNull(object, "object must not be null.");
         return typeof(object.getClass());
     }
 
     @NotNull static JavaClass typeof(@NotNull Class<?> cls) throws BytecodeParsingException {
-        Validation.notNull(cls, "class must not be null.");
         return typeof(cls.getName());
     }
 
     @NotNull static JavaClass typeof(@NotNull String className) throws BytecodeParsingException {
+        return typeof(className, new JavaCache());
+    }
+
+    @NotNull static JavaClass typeof(@NotNull Object object, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
+        return typeof(object.getClass(), cache);
+    }
+
+    @NotNull static JavaClass typeof(@NotNull Class<?> cls, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
+        return typeof(cls.getName(), cache);
+    }
+
+    @NotNull static JavaClass typeof(@NotNull String className, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
+        return typeof(className, cache, null);
+    }
+
+    @NotNull static JavaClass typeof(
+            @NotNull Object object, @NotNull JavaCache cache, ClassLoader classLoader)
+            throws BytecodeParsingException {
+        Validation.notNull(object, "object must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
+        return typeof(object.getClass(), cache, classLoader);
+    }
+
+    @NotNull static JavaClass typeof(
+            @NotNull Class<?> cls, @NotNull JavaCache cache, ClassLoader classLoader)
+            throws BytecodeParsingException {
+        Validation.notNull(cls, "class must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
+        return typeof(cls.getName(), cache, classLoader);
+    }
+
+    @NotNull static JavaClass typeof(
+            @NotNull String className, @NotNull JavaCache cache, ClassLoader classLoader)
+            throws BytecodeParsingException {
         Validation.notNull(className, "className must not be null.");
-        return Cache.CLASSES.computeIfAbsent(className, InternalJavaClass::newInstance);
+        Validation.notNull(cache, "cache must not be null.");
+        return cache.forName(className, classLoader);
     }
 
     @NotNull default <R extends T> R java() throws BytecodeException {
@@ -47,8 +81,4 @@ public interface Java<T> {
     }
 
     @NotNull <R extends T> R java(@Nullable ClassLoader classLoader) throws BytecodeException;
-
-    abstract class Cache {
-        private static final Map<String, JavaClass> CLASSES = new ConcurrentHashMap<>(64, 0.6F);
-    }
 }

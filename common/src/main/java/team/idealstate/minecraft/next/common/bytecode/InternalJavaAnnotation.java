@@ -40,17 +40,22 @@ class InternalJavaAnnotation implements JavaAnnotation {
     private final String annotationTypeName;
     private final JavaAnnotatedElement annotatedElement;
     private final Map<String, Object> mappings = new HashMap<>(16, 0.6F);
+    private final JavaCache cache;
 
     InternalJavaAnnotation(
-            @NotNull String annotationTypeName, @Nullable JavaAnnotatedElement annotatedElement) {
+            @NotNull String annotationTypeName,
+            @Nullable JavaAnnotatedElement annotatedElement,
+            @NotNull JavaCache cache) {
         Validation.notNull(annotationTypeName, "annotationTypeName must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         this.annotationTypeName = annotationTypeName;
         this.annotatedElement = annotatedElement;
+        this.cache = cache;
     }
 
     @NotNull @Override
     public JavaClass getAnnotationType() {
-        return typeof(annotationTypeName);
+        return typeof(annotationTypeName, cache);
     }
 
     @Nullable @Override
@@ -71,8 +76,12 @@ class InternalJavaAnnotation implements JavaAnnotation {
 
     abstract static class AbstractVisitor extends AnnotationVisitor {
 
-        AbstractVisitor(int api, AnnotationVisitor annotationVisitor) {
+        protected final JavaCache cache;
+
+        AbstractVisitor(int api, AnnotationVisitor annotationVisitor, @NotNull JavaCache cache) {
             super(api, annotationVisitor);
+            Validation.notNull(cache, "cache must not be null.");
+            this.cache = cache;
         }
 
         @SuppressWarnings({"unchecked"})
@@ -97,7 +106,7 @@ class InternalJavaAnnotation implements JavaAnnotation {
         public void visit(String name, Object value) {
             super.visit(name, value);
             if (value instanceof Type) {
-                Lazy<JavaClass> lazy = lazy(() -> typeof(((Type) value).getClassName()));
+                Lazy<JavaClass> lazy = lazy(() -> typeof(((Type) value).getClassName(), cache));
                 put(name, lazy);
             } else {
                 put(name, value);
@@ -107,15 +116,16 @@ class InternalJavaAnnotation implements JavaAnnotation {
         @Override
         public void visitEnum(String name, String descriptor, String value) {
             super.visitEnum(name, descriptor, value);
-            put(name, new InternalJavaEnum(Type.getType(descriptor).getClassName(), value));
+            put(name, new InternalJavaEnum(Type.getType(descriptor).getClassName(), value, cache));
         }
 
         @Override
         public AnnotationVisitor visitAnnotation(String name, String descriptor) {
             AnnotationVisitor annotationVisitor = super.visitAnnotation(name, descriptor);
             InternalJavaAnnotation internalJavaAnnotation =
-                    new InternalJavaAnnotation(Type.getType(descriptor).getClassName(), null);
-            annotationVisitor = new Visitor(api, annotationVisitor, internalJavaAnnotation);
+                    new InternalJavaAnnotation(
+                            Type.getType(descriptor).getClassName(), null, cache);
+            annotationVisitor = new Visitor(api, annotationVisitor, internalJavaAnnotation, cache);
             put(name, internalJavaAnnotation);
             return annotationVisitor;
         }
@@ -124,7 +134,7 @@ class InternalJavaAnnotation implements JavaAnnotation {
         public AnnotationVisitor visitArray(String name) {
             AnnotationVisitor annotationVisitor = super.visitArray(name);
             List<Object> list = new ArrayList<>(8);
-            annotationVisitor = new ArrayVisitor(api, annotationVisitor, list);
+            annotationVisitor = new ArrayVisitor(api, annotationVisitor, list, cache);
             put(name, list);
             return annotationVisitor;
         }
@@ -137,8 +147,9 @@ class InternalJavaAnnotation implements JavaAnnotation {
         Visitor(
                 int api,
                 AnnotationVisitor annotationVisitor,
-                @NotNull InternalJavaAnnotation internalJavaAnnotation) {
-            super(api, annotationVisitor);
+                @NotNull InternalJavaAnnotation internalJavaAnnotation,
+                @NotNull JavaCache cache) {
+            super(api, annotationVisitor, cache);
             this.internalJavaAnnotation = internalJavaAnnotation;
         }
 
@@ -152,8 +163,11 @@ class InternalJavaAnnotation implements JavaAnnotation {
         private final List<Object> list;
 
         public ArrayVisitor(
-                int api, AnnotationVisitor annotationVisitor, @NotNull List<Object> list) {
-            super(api, annotationVisitor);
+                int api,
+                AnnotationVisitor annotationVisitor,
+                @NotNull List<Object> list,
+                @NotNull JavaCache cache) {
+            super(api, annotationVisitor, cache);
             Validation.notNull(list, "list must not be null.");
             this.list = list;
         }

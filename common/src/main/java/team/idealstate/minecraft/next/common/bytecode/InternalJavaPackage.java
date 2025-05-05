@@ -45,8 +45,10 @@ class InternalJavaPackage implements JavaPackage {
         this.name = name;
     }
 
-    @NotNull static JavaPackage newInstance(@NotNull String packageName) throws BytecodeParsingException {
+    @NotNull static JavaPackage newInstance(@NotNull String packageName, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
         Validation.notNull(packageName, "packageName must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         return PACKAGES_CACHE.computeIfAbsent(
                 packageName,
                 name -> {
@@ -65,7 +67,8 @@ class InternalJavaPackage implements JavaPackage {
                         throw new BytecodeParsingException(e);
                     }
                     Visitor visitor =
-                            new Visitor(InternalJavaClass.ASM_API, null, internalJavaPackage);
+                            new Visitor(
+                                    InternalJavaClass.ASM_API, null, internalJavaPackage, cache);
                     classReader.accept(visitor, InternalJavaClass.ASM_PARSING_OPTIONS);
                     return internalJavaPackage;
                 });
@@ -85,11 +88,18 @@ class InternalJavaPackage implements JavaPackage {
 
         private final InternalJavaPackage internalJavaPackage;
 
+        private final JavaCache cache;
+
         private Visitor(
-                int api, ClassVisitor cv, @NotNull InternalJavaPackage internalJavaPackage) {
+                int api,
+                ClassVisitor cv,
+                @NotNull InternalJavaPackage internalJavaPackage,
+                @NotNull JavaCache cache) {
             super(api, cv);
             Validation.notNull(internalJavaPackage, "internalJavaPackage must not be null.");
+            Validation.notNull(cache, "cache must not be null.");
             this.internalJavaPackage = internalJavaPackage;
+            this.cache = cache;
         }
 
         @Override
@@ -97,10 +107,10 @@ class InternalJavaPackage implements JavaPackage {
             AnnotationVisitor annotationVisitor = super.visitAnnotation(descriptor, visible);
             InternalJavaAnnotation internalJavaAnnotation =
                     new InternalJavaAnnotation(
-                            Type.getType(descriptor).getClassName(), internalJavaPackage);
+                            Type.getType(descriptor).getClassName(), internalJavaPackage, cache);
             annotationVisitor =
                     new InternalJavaAnnotation.Visitor(
-                            api, annotationVisitor, internalJavaAnnotation);
+                            api, annotationVisitor, internalJavaAnnotation, cache);
             internalJavaPackage.annotations.add(internalJavaAnnotation);
             return annotationVisitor;
         }

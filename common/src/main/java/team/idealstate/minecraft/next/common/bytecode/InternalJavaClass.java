@@ -19,6 +19,7 @@ package team.idealstate.minecraft.next.common.bytecode;
 import static team.idealstate.minecraft.next.common.bytecode.Java.typeof;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,8 +62,12 @@ class InternalJavaClass implements JavaClass {
     private String name;
     private int access;
     private int version;
+    private final JavaCache cache;
 
-    protected InternalJavaClass() {}
+    protected InternalJavaClass(@NotNull JavaCache cache) {
+        Validation.notNull(cache, "cache must not be null.");
+        this.cache = cache;
+    }
 
     static String internalize(String name) {
         return name.replace('.', '/');
@@ -72,17 +77,38 @@ class InternalJavaClass implements JavaClass {
         return name.replace('/', '.');
     }
 
-    static JavaClass newInstance(@NotNull String className) throws BytecodeParsingException {
+    static JavaClass newInstance(
+            @NotNull String className, @NotNull InputStream inputStream, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
         Validation.notNull(className, "className must not be null.");
+        Validation.notNull(inputStream, "inputStream must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         ClassReader classReader;
         try {
-            classReader = new ClassReader(className);
+            classReader = new ClassReader(inputStream);
         } catch (IOException e) {
             throw new BytecodeParsingException(e);
         }
 
-        InternalJavaClass internalJavaClass = new InternalJavaClass();
-        Visitor visitor = new Visitor(ASM_API, null, internalJavaClass);
+        InternalJavaClass internalJavaClass = new InternalJavaClass(cache);
+        cache.put(className, internalJavaClass);
+        Visitor visitor = new Visitor(ASM_API, null, internalJavaClass, cache);
+        classReader.accept(visitor, ASM_PARSING_OPTIONS);
+
+        return internalJavaClass;
+    }
+
+    static JavaClass newInstance(
+            @NotNull String className, @NotNull byte[] classFile, @NotNull JavaCache cache)
+            throws BytecodeParsingException {
+        Validation.notNull(className, "className must not be null.");
+        Validation.notNull(classFile, "classFile must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
+        ClassReader classReader = new ClassReader(classFile);
+
+        InternalJavaClass internalJavaClass = new InternalJavaClass(cache);
+        cache.put(className, internalJavaClass);
+        Visitor visitor = new Visitor(ASM_API, null, internalJavaClass, cache);
         classReader.accept(visitor, ASM_PARSING_OPTIONS);
 
         return internalJavaClass;
@@ -90,27 +116,27 @@ class InternalJavaClass implements JavaClass {
 
     @NotNull @Override
     public JavaPackage getPackage() {
-        return InternalJavaPackage.newInstance(packageName);
+        return InternalJavaPackage.newInstance(packageName, cache);
     }
 
     @Nullable @Override
     public JavaClass getSuperClass() {
-        return typeof(superClassName);
+        return typeof(superClassName, cache);
     }
 
     @NotNull @Override
     public JavaClass[] getInterfaces() {
-        return Arrays.stream(interfaceNames).map(Java::typeof).toArray(JavaClass[]::new);
+        return Arrays.stream(interfaceNames).map(cn -> typeof(cn, cache)).toArray(JavaClass[]::new);
     }
 
     @Nullable @Override
     public JavaClass getOuterClass() {
-        return typeof(outerClassName);
+        return typeof(outerClassName, cache);
     }
 
     @NotNull @Override
     public JavaClass[] getInnerClasses() {
-        return innerClassNames.stream().map(Java::typeof).toArray(JavaClass[]::new);
+        return innerClassNames.stream().map(cn -> typeof(cn, cache)).toArray(JavaClass[]::new);
     }
 
     @NotNull @Override
@@ -181,11 +207,18 @@ class InternalJavaClass implements JavaClass {
         private static final String STATIC_INIT_METHOD_NAME = "<cinit>";
         private static final String INIT_METHOD_NAME = "<init>";
         private final InternalJavaClass internalJavaClass;
+        private final JavaCache cache;
 
-        private Visitor(int api, ClassVisitor cv, @NotNull InternalJavaClass internalJavaClass) {
+        private Visitor(
+                int api,
+                ClassVisitor cv,
+                @NotNull InternalJavaClass internalJavaClass,
+                @NotNull JavaCache cache) {
             super(api, cv);
             Validation.notNull(internalJavaClass, "internalJavaClass must not be null.");
+            Validation.notNull(cache, "cache must not be null.");
             this.internalJavaClass = internalJavaClass;
+            this.cache = cache;
         }
 
         @Override
@@ -225,10 +258,10 @@ class InternalJavaClass implements JavaClass {
             AnnotationVisitor annotationVisitor = super.visitAnnotation(descriptor, visible);
             InternalJavaAnnotation internalJavaAnnotation =
                     new InternalJavaAnnotation(
-                            Type.getType(descriptor).getClassName(), internalJavaClass);
+                            Type.getType(descriptor).getClassName(), internalJavaClass, cache);
             annotationVisitor =
                     new InternalJavaAnnotation.Visitor(
-                            api, annotationVisitor, internalJavaAnnotation);
+                            api, annotationVisitor, internalJavaAnnotation, cache);
             internalJavaClass.annotations.add(internalJavaAnnotation);
             return annotationVisitor;
         }
@@ -244,8 +277,10 @@ class InternalJavaClass implements JavaClass {
                             access,
                             name,
                             Type.getType(descriptor).getClassName(),
-                            value);
-            fieldVisitor = new InternalJavaField.Visitor(api, fieldVisitor, internalJavaField);
+                            value,
+                            cache);
+            fieldVisitor =
+                    new InternalJavaField.Visitor(api, fieldVisitor, internalJavaField, cache);
             internalJavaClass.fields.add(internalJavaField);
             return fieldVisitor;
         }
@@ -270,10 +305,12 @@ class InternalJavaClass implements JavaClass {
                                             ? null
                                             : Arrays.stream(exceptions)
                                                     .map(InternalJavaClass::normalize)
-                                                    .toArray(String[]::new));
+                                                    .toArray(String[]::new),
+                                    cache);
                     InternalJavaConstructor internalJavaConstructor =
                             new InternalJavaConstructor(delegate);
-                    methodVisitor = new InternalJavaMethod.Visitor(api, methodVisitor, delegate);
+                    methodVisitor =
+                            new InternalJavaMethod.Visitor(api, methodVisitor, delegate, cache);
                     internalJavaClass.constructors.add(internalJavaConstructor);
                     break;
                 default:
@@ -288,9 +325,11 @@ class InternalJavaClass implements JavaClass {
                                             ? null
                                             : Arrays.stream(exceptions)
                                                     .map(InternalJavaClass::normalize)
-                                                    .toArray(String[]::new));
+                                                    .toArray(String[]::new),
+                                    cache);
                     methodVisitor =
-                            new InternalJavaMethod.Visitor(api, methodVisitor, internalJavaMethod);
+                            new InternalJavaMethod.Visitor(
+                                    api, methodVisitor, internalJavaMethod, cache);
                     internalJavaClass.methods.add(internalJavaMethod);
             }
             return methodVisitor;

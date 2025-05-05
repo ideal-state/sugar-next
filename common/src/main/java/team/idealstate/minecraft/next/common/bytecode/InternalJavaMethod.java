@@ -46,6 +46,7 @@ class InternalJavaMethod implements JavaMethod {
     private final String returnTypeName;
     private final List<JavaAnnotation> annotations = new ArrayList<>(8);
     private Object defaultValue;
+    private final JavaCache cache;
 
     InternalJavaMethod(
             @NotNull JavaClass declaringClass,
@@ -53,16 +54,19 @@ class InternalJavaMethod implements JavaMethod {
             @NotNull String name,
             int parameterCount,
             @NotNull String returnTypeName,
-            String[] exceptionTypeNames) {
+            String[] exceptionTypeNames,
+            @NotNull JavaCache cache) {
         Validation.notNull(declaringClass, "declaringClass must not be null.");
         Validation.notNull(name, "name must not be null.");
         Validation.notNull(returnTypeName, "returnTypeName must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         this.declaringClass = declaringClass;
         this.access = access;
         this.name = name;
         this.parameterCount = parameterCount;
         this.returnTypeName = returnTypeName;
         this.exceptionTypeNames = exceptionTypeNames;
+        this.cache = cache;
     }
 
     @NotNull @Override
@@ -82,14 +86,16 @@ class InternalJavaMethod implements JavaMethod {
 
     @NotNull @Override
     public JavaClass getReturnType() {
-        return typeof(returnTypeName);
+        return typeof(returnTypeName, cache);
     }
 
     @NotNull @Override
     public JavaClass[] getExceptionTypes() {
         return exceptionTypeNames == null
                 ? new JavaClass[0]
-                : Arrays.stream(exceptionTypeNames).map(Java::typeof).toArray(JavaClass[]::new);
+                : Arrays.stream(exceptionTypeNames)
+                        .map(cn -> typeof(cn, cache))
+                        .toArray(JavaClass[]::new);
     }
 
     @Nullable @Override
@@ -111,14 +117,18 @@ class InternalJavaMethod implements JavaMethod {
 
         private final InternalJavaMethod internalJavaMethod;
         private final Map<Integer, InternalJavaParameter> parameterMap = new HashMap<>(8);
+        private final JavaCache cache;
 
         Visitor(
                 int api,
                 MethodVisitor methodVisitor,
-                @NotNull InternalJavaMethod internalJavaMethod) {
+                @NotNull InternalJavaMethod internalJavaMethod,
+                @NotNull JavaCache cache) {
             super(api, methodVisitor);
             Validation.notNull(internalJavaMethod, "internalJavaMethod must not be null.");
+            Validation.notNull(cache, "cache must not be null.");
             this.internalJavaMethod = internalJavaMethod;
+            this.cache = cache;
         }
 
         @Override
@@ -126,10 +136,10 @@ class InternalJavaMethod implements JavaMethod {
             AnnotationVisitor annotationVisitor = super.visitAnnotation(descriptor, visible);
             InternalJavaAnnotation internalJavaAnnotation =
                     new InternalJavaAnnotation(
-                            Type.getType(descriptor).getClassName(), internalJavaMethod);
+                            Type.getType(descriptor).getClassName(), internalJavaMethod, cache);
             annotationVisitor =
                     new InternalJavaAnnotation.Visitor(
-                            api, annotationVisitor, internalJavaAnnotation);
+                            api, annotationVisitor, internalJavaAnnotation, cache);
             internalJavaMethod.annotations.add(internalJavaAnnotation);
             return annotationVisitor;
         }
@@ -158,7 +168,7 @@ class InternalJavaMethod implements JavaMethod {
             if (isParameterIndex(recalculatedIndex)) {
                 InternalJavaParameter internalJavaParameter =
                         parameterMap.computeIfAbsent(
-                                index, i -> new InternalJavaParameter(internalJavaMethod));
+                                index, i -> new InternalJavaParameter(internalJavaMethod, cache));
                 internalJavaParameter.index = recalculatedIndex;
                 internalJavaParameter.name = name;
                 internalJavaParameter.typeName = Type.getType(descriptor).getClassName();
@@ -174,13 +184,15 @@ class InternalJavaMethod implements JavaMethod {
             if (isParameterIndex(index)) {
                 InternalJavaParameter internalJavaParameter =
                         parameterMap.computeIfAbsent(
-                                index, i -> new InternalJavaParameter(internalJavaMethod));
+                                index, i -> new InternalJavaParameter(internalJavaMethod, cache));
                 InternalJavaAnnotation internalJavaAnnotation =
                         new InternalJavaAnnotation(
-                                Type.getType(descriptor).getClassName(), internalJavaParameter);
+                                Type.getType(descriptor).getClassName(),
+                                internalJavaParameter,
+                                cache);
                 annotationVisitor =
                         new InternalJavaAnnotation.Visitor(
-                                api, annotationVisitor, internalJavaAnnotation);
+                                api, annotationVisitor, internalJavaAnnotation, cache);
                 internalJavaParameter.annotations.add(internalJavaAnnotation);
             }
             return annotationVisitor;
@@ -195,7 +207,7 @@ class InternalJavaMethod implements JavaMethod {
         public AnnotationVisitor visitAnnotationDefault() {
             AnnotationVisitor annotationVisitor = super.visitAnnotationDefault();
             annotationVisitor =
-                    new AnnotationDefaultVisitor(api, annotationVisitor, internalJavaMethod);
+                    new AnnotationDefaultVisitor(api, annotationVisitor, internalJavaMethod, cache);
             return annotationVisitor;
         }
 
@@ -207,8 +219,9 @@ class InternalJavaMethod implements JavaMethod {
             public AnnotationDefaultVisitor(
                     int api,
                     AnnotationVisitor annotationVisitor,
-                    @NotNull InternalJavaMethod internalJavaMethod) {
-                super(api, annotationVisitor);
+                    @NotNull InternalJavaMethod internalJavaMethod,
+                    @NotNull JavaCache cache) {
+                super(api, annotationVisitor, cache);
                 Validation.notNull(internalJavaMethod, "internalJavaMethod must not be null.");
                 this.internalJavaMethod = internalJavaMethod;
             }
@@ -227,10 +240,14 @@ class InternalJavaMethod implements JavaMethod {
         private int index;
         private String name;
         private String typeName;
+        private final JavaCache cache;
 
-        public InternalJavaParameter(@NotNull JavaMethod declaringMethod) {
+        public InternalJavaParameter(
+                @NotNull JavaMethod declaringMethod, @NotNull JavaCache cache) {
             Validation.notNull(declaringMethod, "declaringMethod must not be null");
+            Validation.notNull(cache, "cache must not be null");
             this.declaringMethod = declaringMethod;
+            this.cache = cache;
         }
 
         @NotNull @Override
@@ -252,7 +269,7 @@ class InternalJavaMethod implements JavaMethod {
         @NotNull @Override
         public JavaClass getType() {
             Validation.notNull(typeName, "typeName must not be null");
-            return typeof(typeName);
+            return typeof(typeName, cache);
         }
 
         @NotNull @Override

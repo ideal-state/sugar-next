@@ -27,17 +27,21 @@ class InternalJavaEnum implements JavaEnum {
 
     private final String enumTypeName;
     private final String name;
+    private final JavaCache cache;
 
-    public InternalJavaEnum(@NotNull String enumTypeName, @NotNull String name) {
+    public InternalJavaEnum(
+            @NotNull String enumTypeName, @NotNull String name, @NotNull JavaCache cache) {
         Validation.notNull(enumTypeName, "enumTypeName must not be null.");
         Validation.notNull(name, "name must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         this.enumTypeName = enumTypeName;
         this.name = name;
+        this.cache = cache;
     }
 
     @NotNull @Override
     public JavaClass getEnumType() {
-        return typeof(enumTypeName);
+        return typeof(enumTypeName, cache);
     }
 
     @NotNull @Override

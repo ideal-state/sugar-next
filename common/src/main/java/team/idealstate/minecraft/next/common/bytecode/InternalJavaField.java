@@ -38,21 +38,25 @@ class InternalJavaField implements JavaField {
     private final Object defaultValue;
     private final int access;
     private final List<JavaAnnotation> annotations = new ArrayList<>(8);
+    private final JavaCache cache;
 
     InternalJavaField(
             @NotNull JavaClass declaringClass,
             int access,
             @NotNull String name,
             @NotNull String typeName,
-            @Nullable Object defaultValue) {
+            @Nullable Object defaultValue,
+            @NotNull JavaCache cache) {
         Validation.notNull(declaringClass, "declaringClass must not be null.");
         Validation.notNull(name, "name must not be null.");
         Validation.notNull(typeName, "typeName must not be null.");
+        Validation.notNull(cache, "cache must not be null.");
         this.declaringClass = declaringClass;
         this.access = access;
         this.name = name;
         this.typeName = typeName;
         this.defaultValue = defaultValue;
+        this.cache = cache;
     }
 
     @NotNull @Override
@@ -67,7 +71,7 @@ class InternalJavaField implements JavaField {
 
     @NotNull @Override
     public JavaClass getType() {
-        return typeof(typeName);
+        return typeof(typeName, cache);
     }
 
     @Nullable @Override
@@ -88,11 +92,18 @@ class InternalJavaField implements JavaField {
     static class Visitor extends FieldVisitor {
 
         private final InternalJavaField internalJavaField;
+        private final JavaCache cache;
 
-        Visitor(int api, FieldVisitor fieldVisitor, @NotNull InternalJavaField internalJavaField) {
+        Visitor(
+                int api,
+                FieldVisitor fieldVisitor,
+                @NotNull InternalJavaField internalJavaField,
+                @NotNull JavaCache cache) {
             super(api, fieldVisitor);
             Validation.notNull(internalJavaField, "internalJavaField must not be null.");
+            Validation.notNull(cache, "cache must not be null.");
             this.internalJavaField = internalJavaField;
+            this.cache = cache;
         }
 
         @Override
@@ -100,10 +111,10 @@ class InternalJavaField implements JavaField {
             AnnotationVisitor annotationVisitor = super.visitAnnotation(descriptor, visible);
             InternalJavaAnnotation internalJavaAnnotation =
                     new InternalJavaAnnotation(
-                            Type.getType(descriptor).getClassName(), internalJavaField);
+                            Type.getType(descriptor).getClassName(), internalJavaField, cache);
             annotationVisitor =
                     new InternalJavaAnnotation.Visitor(
-                            api, annotationVisitor, internalJavaAnnotation);
+                            api, annotationVisitor, internalJavaAnnotation, cache);
             internalJavaField.annotations.add(internalJavaAnnotation);
             return annotationVisitor;
         }
