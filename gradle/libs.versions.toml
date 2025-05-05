@@ -1,0 +1,21 @@
+[versions]
+jreleaser = "1.18.0"
+asm = "9.8"
+jackson = "2.19.0"
+spigot = "1.12.2-R0.1-SNAPSHOT"
+placeholderapi = "2.11.6"
+lombok = "1.18.38"
+log4j = "2.24.3"
+slf4j = "2.0.17"
+
+[plugins]
+jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
+
+[libraries]
+asm = { group = "org.ow2.asm", name = "asm", version.ref = "asm" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
+spigot-api = { group = "org.spigotmc", name = "spigot-api", version.ref = "spigot" }
+placeholderapi = { group = "me.clip", name = "placeholderapi", version.ref = "placeholderapi" }
+lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
+log4j-api = { group = "org.apache.logging.log4j", name = "log4j-api", version.ref = "log4j" }
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
