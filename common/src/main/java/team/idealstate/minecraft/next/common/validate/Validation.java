@@ -22,6 +22,11 @@ import team.idealstate.minecraft.next.common.validate.exception.ValidationExcept
 
 public abstract class Validation {
 
+    public static Boolean require(Boolean expression, String message) {
+        vote(expression, message);
+        return expression;
+    }
+
     public static void vote(Boolean expression, String message) {
         if (!Boolean.TRUE.equals(expression)) {
             if (Objects.isNull(message)) {
@@ -31,8 +36,8 @@ public abstract class Validation {
         }
     }
 
-    public static <T> T requireNotNull(T object, String message) {
-        notNull(object, message);
+    public static <T> T requireNull(T object, String message) {
+        isNull(object, message);
         return object;
     }
 
@@ -40,55 +45,120 @@ public abstract class Validation {
         vote(Objects.isNull(object), message);
     }
 
+    public static <T> T requireNotNull(T object, String message) {
+        notNull(object, message);
+        return object;
+    }
+
     public static void notNull(Object object, String message) {
         vote(Objects.nonNull(object), message);
+    }
+
+    public static <T extends CharSequence> T requireBlank(T string, String message) {
+        isBlank(string, message);
+        return string;
     }
 
     public static void isBlank(CharSequence string, String message) {
         vote(StringUtils.isBlank(string), message);
     }
 
+    public static <T extends CharSequence> T requireNullOrBlank(T string, String message) {
+        isNullOrBlank(string, message);
+        return string;
+    }
+
     public static void isNullOrBlank(CharSequence string, String message) {
         vote(StringUtils.isNullOrBlank(string), message);
+    }
+
+    public static <T extends CharSequence> T requireNotBlank(T string, String message) {
+        notBlank(string, message);
+        return string;
     }
 
     public static void notBlank(CharSequence string, String message) {
         vote(StringUtils.isNotBlank(string), message);
     }
 
+    public static <T extends CharSequence> T requireNotNullOrBlank(T string, String message) {
+        notNullOrBlank(string, message);
+        return string;
+    }
+
     public static void notNullOrBlank(CharSequence string, String message) {
         vote(StringUtils.isNotNullOrBlank(string), message);
+    }
+
+    public static <T extends CharSequence> T requireEmpty(T string, String message) {
+        isEmpty(string, message);
+        return string;
     }
 
     public static void isEmpty(CharSequence string, String message) {
         vote(StringUtils.isEmpty(string), message);
     }
 
+    public static <T extends CharSequence> T requireNullOrEmpty(T string, String message) {
+        isNullOrEmpty(string, message);
+        return string;
+    }
+
     public static void isNullOrEmpty(CharSequence string, String message) {
         vote(StringUtils.isNullOrEmpty(string), message);
+    }
+
+    public static <T extends CharSequence> T requireNotEmpty(T string, String message) {
+        notEmpty(string, message);
+        return string;
     }
 
     public static void notEmpty(CharSequence string, String message) {
         vote(StringUtils.isNotEmpty(string), message);
     }
 
+    public static <T extends CharSequence> T requireNotNullOrEmpty(T string, String message) {
+        notNullOrEmpty(string, message);
+        return string;
+    }
+
     public static void notNullOrEmpty(CharSequence string, String message) {
         vote(StringUtils.isNotNullOrEmpty(string), message);
+    }
+
+    public static <T extends CharSequence> T requireNumeric(T string, String message) {
+        isNumeric(string, message);
+        return string;
     }
 
     public static void isNumeric(CharSequence string, String message) {
         vote(StringUtils.isNumeric(string), message);
     }
 
+    public static <T extends CharSequence> T requireNotNumeric(T string, String message) {
+        notNumeric(string, message);
+        return string;
+    }
+
     public static void notNumeric(CharSequence string, String message) {
         vote(StringUtils.isNotNumeric(string), message);
     }
 
-    public static void isIntegral(CharSequence string, String message) {
-        vote(StringUtils.isIntegral(string), message);
+    public static <T extends CharSequence> T requireInteger(T string, String message) {
+        isInteger(string, message);
+        return string;
     }
 
-    public static void notIntegral(CharSequence string, String message) {
-        vote(StringUtils.isNotIntegral(string), message);
+    public static void isInteger(CharSequence string, String message) {
+        vote(StringUtils.isInteger(string), message);
+    }
+
+    public static <T extends CharSequence> T requireNotInteger(T string, String message) {
+        notInteger(string, message);
+        return string;
+    }
+
+    public static void notInteger(CharSequence string, String message) {
+        vote(StringUtils.isNotInteger(string), message);
     }
 }

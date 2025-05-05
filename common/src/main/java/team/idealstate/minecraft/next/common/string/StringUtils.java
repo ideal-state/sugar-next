@@ -119,7 +119,7 @@ public abstract class StringUtils {
     }
 
     @SuppressWarnings("DuplicatedCode")
-    public static boolean isIntegral(CharSequence charSequence) {
+    public static boolean isInteger(CharSequence charSequence) {
         if (isNullOrBlank(charSequence)) {
             return false;
         }
@@ -146,8 +146,8 @@ public abstract class StringUtils {
         return true;
     }
 
-    public static boolean isNotIntegral(CharSequence charSequence) {
-        return !isIntegral(charSequence);
+    public static boolean isNotInteger(CharSequence charSequence) {
+        return !isInteger(charSequence);
     }
 
     public static int countMatches(CharSequence charSequence, char matched) {
