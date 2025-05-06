@@ -68,8 +68,4 @@ public interface Context {
 
     @NotNull <M extends Annotation, T> List<Component<M, T>> componentsBy(
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
-
-    @Nullable <T> Component<NextConfiguration, T> configurationBy(@NotNull Class<T> instanceClass);
-
-    @NotNull <T> List<Component<NextConfiguration, T>> configurationsBy(@NotNull Class<T> instanceClass);
 }

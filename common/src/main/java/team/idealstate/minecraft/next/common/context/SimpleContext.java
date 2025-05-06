@@ -164,9 +164,11 @@ final class SimpleContext implements Context {
                 true,
                 null,
                 it -> {
+                    it.doBeforeInitialize();
                     it.lifecycle.onInitialize(this);
                     it.doInitialize();
                     it.lifecycle.onInitialized(this);
+                    it.doAfterInitialize();
                     return null;
                 });
     }
@@ -180,9 +182,11 @@ final class SimpleContext implements Context {
                 true,
                 null,
                 it -> {
+                    it.doBeforeLoad();
                     it.lifecycle.onLoad(this);
                     it.doLoad();
                     it.lifecycle.onLoaded(this);
+                    it.doAfterLoad();
                     return null;
                 });
     }
@@ -196,9 +200,11 @@ final class SimpleContext implements Context {
                 true,
                 null,
                 it -> {
+                    it.doBeforeEnable();
                     it.lifecycle.onEnable(this);
                     it.doEnable();
                     it.lifecycle.onEnabled(this);
+                    it.doAfterEnable();
                     return null;
                 });
     }
@@ -212,9 +218,11 @@ final class SimpleContext implements Context {
                 true,
                 null,
                 it -> {
+                    it.doBeforeDisable();
                     it.lifecycle.onDisable(this);
                     it.doDisable();
                     it.lifecycle.onDisabled(this);
+                    it.doAfterDisable();
                     return null;
                 });
     }
@@ -228,9 +236,11 @@ final class SimpleContext implements Context {
                 true,
                 null,
                 it -> {
+                    it.doBeforeDestroy();
                     it.lifecycle.onDestroy(this);
                     it.doDestroy();
                     it.lifecycle.onDestroyed(this);
+                    it.doAfterDestroy();
                     return null;
                 });
     }
@@ -291,7 +301,7 @@ final class SimpleContext implements Context {
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
         Validation.notNull(metadataClass, "metadataClass must not be null.");
         Validation.notNull(instanceClass, "instanceClass must not be null.");
-        return mustDependOn(
+        return (Component<M, T>) mustDependOn(
                 STATUS_ENABLED,
                 true,
                 true,
@@ -304,8 +314,16 @@ final class SimpleContext implements Context {
                     }
                     InstanceFactory<M, ?> instanceFactory =
                             instanceFactoryBy(metadataClass, instanceClass);
+                    Class<?> activedClass = instanceClass;
                     if (instanceFactory == null) {
-                        return null;
+                        if (Object.class.equals(instanceClass)) {
+                            return null;
+                        }
+                        instanceFactory = instanceFactoryBy(metadataClass, Object.class);
+                        if (instanceFactory == null) {
+                            return null;
+                        }
+                        activedClass = Object.class;
                     }
                     for (Class<?> markedClass : markedClasses) {
                         M metadata = markedClass.getAnnotation(metadataClass);
@@ -313,10 +331,14 @@ final class SimpleContext implements Context {
                         assert metadata != null;
                         ComponentKey componentKey =
                                 new ComponentKey(metadataClass, markedClass, instanceFactory);
-                        SimpleComponent<M, T> component =
-                                (SimpleComponent<M, T>) components.get(componentKey);
+                        SimpleComponent<M, ?> component =
+                                (SimpleComponent<M, ?>) components.get(componentKey);
                         if (component != null) {
-                            return component;
+                            if (activedClass.equals(instanceClass) || instanceClass.isInstance(component.getInstance())) {
+                                it.components.put(componentKey, component);
+                                return component;
+                            }
+                            continue;
                         }
                         if (!instanceFactory.canBeCreated(it, metadata, markedClass)) {
                             continue;
@@ -329,20 +351,24 @@ final class SimpleContext implements Context {
                             T instance = (T) instanceFactory.create(it, metadata, markedClass);
                             component = new SimpleComponent<>(metadata, instance);
                         } else {
+                            InstanceFactory<M, ?> finalInstanceFactory = instanceFactory;
                             component =
                                     new SimpleComponent<>(
                                             metadata,
                                             Lazy.of(
                                                     () ->
                                                             (T)
-                                                                    instanceFactory.create(
+                                                                    finalInstanceFactory.create(
                                                                             it,
                                                                             metadata,
                                                                             markedClass)));
                         }
-                        components.put(componentKey, component);
+                        if (activedClass.equals(instanceClass) || instanceClass.isInstance(component.getInstance())) {
+                            it.components.put(componentKey, component);
+                            it.inProgress.remove(componentKey);
+                            return component;
+                        }
                         it.inProgress.remove(componentKey);
-                        return component;
                     }
                     return null;
                 });
@@ -356,7 +382,7 @@ final class SimpleContext implements Context {
     }
 
     @NotNull @Override
-    @SuppressWarnings({"unchecked", "DuplicatedCode"})
+    @SuppressWarnings({"unchecked", "rawtypes", "DuplicatedCode"})
     public <M extends Annotation, T> List<Component<M, T>> componentsBy(
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
         Validation.notNull(metadataClass, "metadataClass must not be null.");
@@ -374,8 +400,16 @@ final class SimpleContext implements Context {
                     }
                     InstanceFactory<M, ?> instanceFactory =
                             instanceFactoryBy(metadataClass, instanceClass);
+                    Class<?> activedClass = instanceClass;
                     if (instanceFactory == null) {
-                        return Collections.emptyList();
+                        if (Object.class.equals(instanceClass)) {
+                            return Collections.emptyList();
+                        }
+                        instanceFactory = instanceFactoryBy(metadataClass, Object.class);
+                        if (instanceFactory == null) {
+                            return Collections.emptyList();
+                        }
+                        activedClass = Object.class;
                     }
                     List<Component<M, T>> components = new ArrayList<>(markedClasses.size());
                     for (Class<?> markedClass : markedClasses) {
@@ -384,10 +418,12 @@ final class SimpleContext implements Context {
                         assert metadata != null;
                         ComponentKey componentKey =
                                 new ComponentKey(metadataClass, markedClass, instanceFactory);
-                        SimpleComponent<M, T> component =
-                                (SimpleComponent<M, T>) it.components.get(componentKey);
+                        SimpleComponent<M, ?> component =
+                                (SimpleComponent<M, ?>) it.components.get(componentKey);
                         if (component != null) {
-                            components.add(component);
+                            if (activedClass.equals(instanceClass) || instanceClass.isInstance(component.getInstance())) {
+                                components.add((SimpleComponent) component);
+                            }
                             continue;
                         }
                         if (!instanceFactory.canBeCreated(it, metadata, markedClass)) {
@@ -401,72 +437,40 @@ final class SimpleContext implements Context {
                             T instance = (T) instanceFactory.create(it, metadata, markedClass);
                             component = new SimpleComponent<>(metadata, instance);
                         } else {
+                            InstanceFactory<M, ?> finalInstanceFactory = instanceFactory;
                             component =
                                     new SimpleComponent<>(
                                             metadata,
                                             Lazy.of(
                                                     () ->
                                                             (T)
-                                                                    instanceFactory.create(
+                                                                    finalInstanceFactory.create(
                                                                             it,
                                                                             metadata,
                                                                             markedClass)));
                         }
-                        it.components.put(componentKey, component);
+                        if (activedClass.equals(instanceClass) || instanceClass.isInstance(component.getInstance())) {
+                            it.components.put(componentKey, component);
+                            components.add((SimpleComponent) component);
+                        }
                         it.inProgress.remove(componentKey);
-                        components.add(component);
                     }
                     return components;
                 });
     }
 
-    @Nullable @Override
-    @SuppressWarnings({"unchecked"})
-    public <T> Component<NextConfiguration, T> configurationBy(@NotNull Class<T> instanceClass) {
-        Component<NextConfiguration, T> component =
-                componentBy(NextConfiguration.class, instanceClass);
-        if (component != null) {
-            return component;
-        }
-        List<Component<NextConfiguration, Object>> components =
-                componentsBy(NextConfiguration.class, Object.class);
-        if (components.isEmpty()) {
-            return null;
-        }
-        for (Component<NextConfiguration, Object> objectComponent : components) {
-            if (instanceClass.isInstance(objectComponent.getInstance())) {
-                return (Component<NextConfiguration, T>) objectComponent;
-            }
-        }
-        return null;
-    }
-
-    @NotNull @Override
-    @SuppressWarnings({"unchecked"})
-    public <T> List<Component<NextConfiguration, T>> configurationsBy(
-            @NotNull Class<T> instanceClass) {
-        List<Component<NextConfiguration, T>> components =
-                componentsBy(NextConfiguration.class, instanceClass);
-        if (components.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<Component<NextConfiguration, Object>> objectComponents =
-                componentsBy(NextConfiguration.class, Object.class);
-        if (objectComponents.isEmpty()) {
-            return Collections.emptyList();
-        }
-        components = new ArrayList<>(objectComponents.size());
-        for (Component<NextConfiguration, Object> objectComponent : objectComponents) {
-            if (instanceClass.isInstance(objectComponent.getInstance())) {
-                components.add((Component<NextConfiguration, T>) objectComponent);
-            }
-        }
-        return components;
+    private void doBeforeInitialize() {
     }
 
     private void doInitialize() {
+    }
+
+    private void doAfterInitialize() {
         setInstanceFactory(NextCommand.class, new NextCommandInstanceFactory());
         setInstanceFactory(NextPlaceholder.class, new NextPlaceholderInstanceFactory());
+    }
+
+    private void doBeforeLoad() {
     }
 
     private void doLoad() throws Throwable {
@@ -541,10 +545,17 @@ final class SimpleContext implements Context {
         }
     }
 
+    private void doAfterLoad() {}
+
+    private void doBeforeEnable() {}
     private void doEnable() {}
+    private void doAfterEnable() {}
 
+    private void doBeforeDisable() {}
     private void doDisable() {}
+    private void doAfterDisable() {}
 
+    private void doBeforeDestroy() {}
     private void doDestroy() {
         if (components.isEmpty()) {
             return;
@@ -569,6 +580,7 @@ final class SimpleContext implements Context {
             throw new IllegalStateException("failed to destroy " + count + " components.");
         }
     }
+    private void doAfterDestroy() {}
 
     @RequiredArgsConstructor
     @Getter(AccessLevel.PRIVATE)
