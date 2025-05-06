@@ -90,6 +90,7 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
         if (classpath.endsWith(".class")) {
             className = classpath.substring(0, className.length() - 6);
         } else {
+            classpath = classpath.replace('.', '/');
             classpath += ".class";
         }
         className = className.replace('/', '.');
@@ -114,8 +115,11 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
                                                         classFile.set(InputUtils.readStream(input));
                                                     });
                                 });
-                javaClass =
-                        InternalJavaClass.newInstance(className, (byte[]) classFile.get(), this);
+                if (classFile.get() != null) {
+                    javaClass =
+                            InternalJavaClass.newInstance(
+                                    className, (byte[]) classFile.get(), this);
+                }
             } catch (IOException e) {
                 throw new BytecodeParsingException(e);
             }
@@ -126,7 +130,7 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
             }
             try (InputStream inputStream = classLoader.getResourceAsStream("/" + classpath)) {
                 if (inputStream == null) {
-                    throw new BytecodeParsingException("cannot find class " + className);
+                    throw new BytecodeParsingException(new ClassNotFoundException(className));
                 }
                 javaClass = InternalJavaClass.newInstance(className, inputStream, this);
             } catch (IOException e) {
