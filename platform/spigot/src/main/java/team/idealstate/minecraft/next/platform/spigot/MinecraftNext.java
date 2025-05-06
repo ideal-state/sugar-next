@@ -16,6 +16,38 @@
 
 package team.idealstate.minecraft.next.platform.spigot;
 
-import team.idealstate.minecraft.next.platform.spigot.api.SpigotNextPlugin;
+import team.idealstate.minecraft.next.common.context.Context;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.platform.spigot.api.SpigotPlugin;
 
-public final class MinecraftNext extends SpigotNextPlugin {}
+public final class MinecraftNext extends SpigotPlugin {
+    @Override
+    public void onInitialize(@NotNull Context context) {}
+
+    @Override
+    public void onInitialized(@NotNull Context context) {}
+
+    @Override
+    public void onLoad(@NotNull Context context) {}
+
+    @Override
+    public void onLoaded(@NotNull Context context) {}
+
+    @Override
+    public void onEnable(@NotNull Context context) {}
+
+    @Override
+    public void onEnabled(@NotNull Context context) {}
+
+    @Override
+    public void onDisable(@NotNull Context context) {}
+
+    @Override
+    public void onDisabled(@NotNull Context context) {}
+
+    @Override
+    public void onDestroy(@NotNull Context context) {}
+
+    @Override
+    public void onDestroyed(@NotNull Context context) {}
+}

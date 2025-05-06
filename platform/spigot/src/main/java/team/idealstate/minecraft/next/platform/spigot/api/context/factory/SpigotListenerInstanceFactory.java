@@ -14,19 +14,16 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.hook;
+package team.idealstate.minecraft.next.platform.spigot.api.context.factory;
 
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.server.PluginEnableEvent;
+import team.idealstate.minecraft.next.common.context.annotation.NextEventListener;
+import team.idealstate.minecraft.next.common.context.factory.NoArgsConstructorInstanceFactory;
 
-public final class PlaceholderAPIHook implements Listener {
+public class SpigotListenerInstanceFactory
+        extends NoArgsConstructorInstanceFactory<NextEventListener, Listener> {
 
-    private static final String PLACEHOLDER_API = "PlaceholderAPI";
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlaceholderAPIEnabled(PluginEnableEvent event) {
-        if (PLACEHOLDER_API.equals(event.getPlugin().getName())) {}
+    public SpigotListenerInstanceFactory() {
+        super(NextEventListener.class, Listener.class);
     }
 }
