@@ -16,7 +16,6 @@
 
 package team.idealstate.minecraft.next.common.bytecode;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +27,7 @@ import java.util.jar.JarFile;
 import team.idealstate.minecraft.next.common.bytecode.api.member.JavaClass;
 import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingException;
 import team.idealstate.minecraft.next.common.function.Functional;
+import team.idealstate.minecraft.next.common.io.InputUtils;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
@@ -111,7 +111,7 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
                                     Functional.functional(jar.getInputStream(entry))
                                             .use(
                                                     input -> {
-                                                        classFile.set(readStream(input));
+                                                        classFile.set(InputUtils.readStream(input));
                                                     });
                                 });
                 javaClass =
@@ -134,32 +134,5 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
             }
         }
         return javaClass;
-    }
-
-    private static byte[] readStream(@NotNull InputStream inputStream) throws IOException {
-        Validation.notNull(inputStream, "inputStream must not be null.");
-        int bufferSize = computeBufferSize(inputStream);
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            byte[] data = new byte[bufferSize];
-            int bytesRead;
-            int readCount = 0;
-            while ((bytesRead = inputStream.read(data, 0, bufferSize)) != -1) {
-                outputStream.write(data, 0, bytesRead);
-                readCount++;
-            }
-            outputStream.flush();
-            if (readCount == 1) {
-                return data;
-            }
-            return outputStream.toByteArray();
-        }
-    }
-
-    private static int computeBufferSize(final InputStream inputStream) throws IOException {
-        int expectedLength = inputStream.available();
-        if (expectedLength < 256) {
-            return 4096;
-        }
-        return Math.min(expectedLength, 1048576);
     }
 }
