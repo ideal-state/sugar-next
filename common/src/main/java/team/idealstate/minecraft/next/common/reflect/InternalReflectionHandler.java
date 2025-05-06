@@ -51,7 +51,7 @@ class InternalReflectionHandler implements ReflectionInvocationHandler {
             Object target) {
         Validation.notNull(classLoader, "classLoader must not be null");
         Validation.notNull(reflectionInterface, "reflectionInterface must not be null");
-        Validation.vote(
+        Validation.is(
                 reflectionInterface.isInterface(), "reflectionInterface must be an interface");
         this.target = target;
 

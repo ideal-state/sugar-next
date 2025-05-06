@@ -162,7 +162,7 @@ class InternalJavaClass implements JavaClass {
     @Override
     public boolean isAssignableFrom(@NotNull JavaType type) {
         Validation.notNull(type, "type must not be null.");
-        Validation.vote(type instanceof JavaClass, "type must be a JavaClass.");
+        Validation.is(type instanceof JavaClass, "type must be a JavaClass.");
         if (cannotBeAssignableFrom.contains(type)) {
             return false;
         }

@@ -23,12 +23,26 @@ import team.idealstate.minecraft.next.common.validate.exception.ValidationExcept
 public abstract class Validation {
 
     public static Boolean require(Boolean expression, String message) {
-        vote(expression, message);
+        is(expression, message);
         return expression;
     }
 
-    public static void vote(Boolean expression, String message) {
+    public static void is(Boolean expression, String message) {
         if (!Boolean.TRUE.equals(expression)) {
+            if (Objects.isNull(message)) {
+                throw new ValidationException();
+            }
+            throw new ValidationException(message);
+        }
+    }
+
+    public static Boolean requireNot(Boolean expression, String message) {
+        not(expression, message);
+        return expression;
+    }
+
+    public static void not(Boolean expression, String message) {
+        if (Boolean.TRUE.equals(expression)) {
             if (Objects.isNull(message)) {
                 throw new ValidationException();
             }
@@ -42,7 +56,7 @@ public abstract class Validation {
     }
 
     public static void isNull(Object object, String message) {
-        vote(Objects.isNull(object), message);
+        is(Objects.isNull(object), message);
     }
 
     public static <T> T requireNotNull(T object, String message) {
@@ -51,7 +65,7 @@ public abstract class Validation {
     }
 
     public static void notNull(Object object, String message) {
-        vote(Objects.nonNull(object), message);
+        is(Objects.nonNull(object), message);
     }
 
     public static <T extends CharSequence> T requireBlank(T string, String message) {
@@ -60,7 +74,7 @@ public abstract class Validation {
     }
 
     public static void isBlank(CharSequence string, String message) {
-        vote(StringUtils.isBlank(string), message);
+        is(StringUtils.isBlank(string), message);
     }
 
     public static <T extends CharSequence> T requireNullOrBlank(T string, String message) {
@@ -69,7 +83,7 @@ public abstract class Validation {
     }
 
     public static void isNullOrBlank(CharSequence string, String message) {
-        vote(StringUtils.isNullOrBlank(string), message);
+        is(StringUtils.isNullOrBlank(string), message);
     }
 
     public static <T extends CharSequence> T requireNotBlank(T string, String message) {
@@ -78,7 +92,7 @@ public abstract class Validation {
     }
 
     public static void notBlank(CharSequence string, String message) {
-        vote(StringUtils.isNotBlank(string), message);
+        is(StringUtils.isNotBlank(string), message);
     }
 
     public static <T extends CharSequence> T requireNotNullOrBlank(T string, String message) {
@@ -87,7 +101,7 @@ public abstract class Validation {
     }
 
     public static void notNullOrBlank(CharSequence string, String message) {
-        vote(StringUtils.isNotNullOrBlank(string), message);
+        is(StringUtils.isNotNullOrBlank(string), message);
     }
 
     public static <T extends CharSequence> T requireEmpty(T string, String message) {
@@ -96,7 +110,7 @@ public abstract class Validation {
     }
 
     public static void isEmpty(CharSequence string, String message) {
-        vote(StringUtils.isEmpty(string), message);
+        is(StringUtils.isEmpty(string), message);
     }
 
     public static <T extends CharSequence> T requireNullOrEmpty(T string, String message) {
@@ -105,7 +119,7 @@ public abstract class Validation {
     }
 
     public static void isNullOrEmpty(CharSequence string, String message) {
-        vote(StringUtils.isNullOrEmpty(string), message);
+        is(StringUtils.isNullOrEmpty(string), message);
     }
 
     public static <T extends CharSequence> T requireNotEmpty(T string, String message) {
@@ -114,7 +128,7 @@ public abstract class Validation {
     }
 
     public static void notEmpty(CharSequence string, String message) {
-        vote(StringUtils.isNotEmpty(string), message);
+        is(StringUtils.isNotEmpty(string), message);
     }
 
     public static <T extends CharSequence> T requireNotNullOrEmpty(T string, String message) {
@@ -123,7 +137,7 @@ public abstract class Validation {
     }
 
     public static void notNullOrEmpty(CharSequence string, String message) {
-        vote(StringUtils.isNotNullOrEmpty(string), message);
+        is(StringUtils.isNotNullOrEmpty(string), message);
     }
 
     public static <T extends CharSequence> T requireNumeric(T string, String message) {
@@ -132,7 +146,7 @@ public abstract class Validation {
     }
 
     public static void isNumeric(CharSequence string, String message) {
-        vote(StringUtils.isNumeric(string), message);
+        is(StringUtils.isNumeric(string), message);
     }
 
     public static <T extends CharSequence> T requireNotNumeric(T string, String message) {
@@ -141,7 +155,7 @@ public abstract class Validation {
     }
 
     public static void notNumeric(CharSequence string, String message) {
-        vote(StringUtils.isNotNumeric(string), message);
+        is(StringUtils.isNotNumeric(string), message);
     }
 
     public static <T extends CharSequence> T requireInteger(T string, String message) {
@@ -150,7 +164,7 @@ public abstract class Validation {
     }
 
     public static void isInteger(CharSequence string, String message) {
-        vote(StringUtils.isInteger(string), message);
+        is(StringUtils.isInteger(string), message);
     }
 
     public static <T extends CharSequence> T requireNotInteger(T string, String message) {
@@ -159,6 +173,6 @@ public abstract class Validation {
     }
 
     public static void notInteger(CharSequence string, String message) {
-        vote(StringUtils.isNotInteger(string), message);
+        is(StringUtils.isNotInteger(string), message);
     }
 }

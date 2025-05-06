@@ -33,7 +33,7 @@ public abstract class UUIDUtils {
 
     public static UUID binaryToUUID(@NotNull byte[] binary, boolean swapFlag) {
         Validation.notNull(binary, "binary must not be null");
-        Validation.vote(binary.length == BIN_LEN, "binary's length must be equal to " + BIN_LEN);
+        Validation.is(binary.length == BIN_LEN, "binary's length must be equal to " + BIN_LEN);
         if (swapFlag) {
             byte[] copiedBinary = new byte[BIN_LEN];
             for (int i = 0, j = 0; j < SWAP.length; j++) {

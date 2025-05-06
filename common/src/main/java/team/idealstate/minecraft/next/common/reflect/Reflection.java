@@ -28,7 +28,7 @@ public abstract class Reflection {
     @NotNull public static <T> T reflect(
             ClassLoader classLoader, @NotNull Class<T> reflectionInterface, Object target) {
         Validation.notNull(reflectionInterface, "reflectionInterface must not be null");
-        Validation.vote(
+        Validation.is(
                 reflectionInterface.isInterface(), "reflectionInterface must be an interface");
         classLoader = classLoader != null ? classLoader : reflectionInterface.getClassLoader();
         InternalReflectionHandler internalReflectionHandler =
@@ -42,7 +42,7 @@ public abstract class Reflection {
     @NotNull public static <A extends Annotation> A annotation(
             @NotNull Class<A> annotationType, Map<String, Object> mappings) {
         Validation.notNull(annotationType, "annotationType must not be null");
-        Validation.vote(
+        Validation.is(
                 Annotation.class.isAssignableFrom(annotationType),
                 "annotationType must be an Annotation.");
         Validation.notNull(mappings, "mappings must not be null");
