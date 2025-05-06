@@ -5,3 +5,7 @@ main: team.idealstate.minecraft.next.platform.spigot.MinecraftNext
 load: STARTUP
 authors:
 - ideal-state
+commands:
+  minecraftnext:
+    aliases:
+    - next
