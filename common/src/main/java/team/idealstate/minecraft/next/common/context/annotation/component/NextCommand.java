@@ -14,23 +14,23 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation;
+package team.idealstate.minecraft.next.common.context.annotation.component;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.context.InstanceFactory;
-import team.idealstate.minecraft.next.common.eventbus.Event;
+import team.idealstate.minecraft.next.common.command.CommandLine;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextEventSubscriber {
+public @interface NextCommand {
 
     /**
-     * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link InstanceFactory} 来决定
+     * @return 命令的主要名称（标识符），为 "" 时则使用类名
+     * @see CommandLine#validateName(String)
      */
-    Class<? extends Event> value() default Event.class;
+    String value() default "";
 }

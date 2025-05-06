@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation;
+package team.idealstate.minecraft.next.common.context.annotation.component;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
