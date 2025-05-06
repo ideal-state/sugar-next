@@ -33,7 +33,7 @@ public abstract class NoArgsConstructorInstanceFactory<M extends Annotation, T>
     @Override
     protected boolean doCanBeCreated(
             @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
-        if (getInstanceClass().isAssignableFrom(marked)) {
+        if (!getInstanceClass().isAssignableFrom(marked)) {
             Log.warn(
                     () ->
                             getMetadataClass().getSimpleName()

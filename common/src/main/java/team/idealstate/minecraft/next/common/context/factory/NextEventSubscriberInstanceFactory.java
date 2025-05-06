@@ -16,7 +16,7 @@
 
 package team.idealstate.minecraft.next.common.context.factory;
 
-import team.idealstate.minecraft.next.common.context.annotation.NextEventSubscriber;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
 
 public final class NextEventSubscriberInstanceFactory
         extends NoArgsConstructorInstanceFactory<NextEventSubscriber, Object> {

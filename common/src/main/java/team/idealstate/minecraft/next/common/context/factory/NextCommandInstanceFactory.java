@@ -16,7 +16,7 @@
 
 package team.idealstate.minecraft.next.common.context.factory;
 
-import team.idealstate.minecraft.next.common.context.annotation.NextCommand;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public final class NextCommandInstanceFactory extends CommandInstanceFactory<NextCommand> {

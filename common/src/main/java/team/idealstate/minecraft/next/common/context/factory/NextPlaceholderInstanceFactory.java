@@ -16,7 +16,7 @@
 
 package team.idealstate.minecraft.next.common.context.factory;
 
-import team.idealstate.minecraft.next.common.context.annotation.NextPlaceholder;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public final class NextPlaceholderInstanceFactory extends CommandInstanceFactory<NextPlaceholder> {

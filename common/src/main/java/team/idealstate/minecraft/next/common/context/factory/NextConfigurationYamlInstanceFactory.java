@@ -24,7 +24,7 @@ import java.util.Objects;
 import org.yaml.snakeyaml.Yaml;
 import team.idealstate.minecraft.next.common.context.AbstractInstanceFactory;
 import team.idealstate.minecraft.next.common.context.Context;
-import team.idealstate.minecraft.next.common.context.annotation.NextConfiguration;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextConfiguration;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.logging.Log;

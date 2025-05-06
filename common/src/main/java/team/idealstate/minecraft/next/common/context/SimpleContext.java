@@ -58,12 +58,13 @@ import team.idealstate.minecraft.next.common.bytecode.Java;
 import team.idealstate.minecraft.next.common.bytecode.JavaCache;
 import team.idealstate.minecraft.next.common.bytecode.api.member.JavaClass;
 import team.idealstate.minecraft.next.common.bytecode.api.struct.JavaAnnotation;
-import team.idealstate.minecraft.next.common.context.annotation.NextCommand;
-import team.idealstate.minecraft.next.common.context.annotation.NextComponent;
-import team.idealstate.minecraft.next.common.context.annotation.NextConfiguration;
-import team.idealstate.minecraft.next.common.context.annotation.NextEventSubscriber;
+import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingException;
 import team.idealstate.minecraft.next.common.context.annotation.NextLazy;
-import team.idealstate.minecraft.next.common.context.annotation.NextPlaceholder;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextComponent;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextConfiguration;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
 import team.idealstate.minecraft.next.common.context.aware.Aware;
 import team.idealstate.minecraft.next.common.context.aware.ContextAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
@@ -112,7 +113,7 @@ final class SimpleContext implements Context {
             Function<SimpleContext, R> function) {
         int current = this.status;
         try {
-            Validation.is(current <= STATUS_ERROR, "error status " + current + ".");
+            Validation.is(current > STATUS_ERROR, "error status " + current + ".");
             Validation.is(current == depend, "status must be " + depend + ".");
         } catch (Throwable e) {
             throw new ContextException(e);
@@ -641,7 +642,15 @@ final class SimpleContext implements Context {
             JavaClass javaClass = Java.typeof(classPath, javaCache, ownerClassLoader);
             JavaAnnotation[] annotations = javaClass.getAnnotations();
             for (JavaAnnotation annotation : annotations) {
-                JavaClass annotationType = annotation.getAnnotationType();
+                JavaClass annotationType;
+                try {
+                    annotationType = annotation.getAnnotationType();
+                } catch (BytecodeParsingException e) {
+                    if (e.getCause() instanceof ClassNotFoundException) {
+                        continue;
+                    }
+                    throw e;
+                }
                 String annotationTypeName = annotationType.getName();
                 for (Class<? extends Annotation> metadataClass : instanceFactories.keySet()) {
                     if (annotationTypeName.equals(metadataClass.getName())) {
@@ -650,7 +659,8 @@ final class SimpleContext implements Context {
                                 this.markedClasses.computeIfAbsent(
                                         metadataClass, k -> new ConcurrentLinkedDeque<>());
                         classes.add(markedClass);
-                        Log.debug(() -> metadataClass.getName() + ": " + markedClass.getName());
+                        Log.debug(
+                                () -> metadataClass.getSimpleName() + ": " + markedClass.getName());
                     }
                 }
             }
