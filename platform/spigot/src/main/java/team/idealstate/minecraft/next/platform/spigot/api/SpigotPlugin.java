@@ -32,17 +32,18 @@ import org.bukkit.plugin.java.JavaPluginLoader;
 import team.idealstate.minecraft.next.common.context.Component;
 import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.context.ContextHolder;
-import team.idealstate.minecraft.next.common.context.Lifecycle;
+import team.idealstate.minecraft.next.common.context.ContextLifecycle;
 import team.idealstate.minecraft.next.common.context.annotation.NextCommand;
-import team.idealstate.minecraft.next.common.context.annotation.NextEventListener;
+import team.idealstate.minecraft.next.common.context.annotation.NextEventSubscriber;
 import team.idealstate.minecraft.next.common.context.annotation.NextPlaceholder;
+import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.platform.spigot.api.command.SpigotCommand;
 import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotListenerInstanceFactory;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.SpigotPlaceholderExpansion;
 
-public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, Lifecycle {
+public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, ContextLifecycle {
 
-    private final Context context = Context.of(this, this);
+    private final Context context = Context.of(this, this, EventBus.instance());
 
     public SpigotPlugin() {
         context.initialize();
@@ -65,7 +66,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     @Override
     public final void onLoad() {
         super.onLoad();
-        context.setInstanceFactory(NextEventListener.class, new SpigotListenerInstanceFactory());
+        context.setInstanceFactory(NextEventSubscriber.class, new SpigotListenerInstanceFactory());
         context.load();
     }
 
@@ -135,12 +136,12 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     }
 
     private void registerEventListeners(PluginManager pluginManager) {
-        List<Component<NextEventListener, Listener>> components =
-                context.componentsBy(NextEventListener.class, Listener.class);
+        List<Component<NextEventSubscriber, Listener>> components =
+                context.componentsBy(NextEventSubscriber.class, Listener.class);
         if (components.isEmpty()) {
             return;
         }
-        for (Component<NextEventListener, Listener> component : components) {
+        for (Component<NextEventSubscriber, Listener> component : components) {
             Listener instance = component.getInstance();
             pluginManager.registerEvents(instance, this);
         }

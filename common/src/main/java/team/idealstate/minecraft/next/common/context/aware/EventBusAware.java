@@ -14,29 +14,12 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context;
+package team.idealstate.minecraft.next.common.context.aware;
 
+import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public interface Lifecycle {
+public interface EventBusAware extends Aware {
 
-    void onInitialize(@NotNull Context context);
-
-    void onInitialized(@NotNull Context context);
-
-    void onLoad(@NotNull Context context);
-
-    void onLoaded(@NotNull Context context);
-
-    void onEnable(@NotNull Context context);
-
-    void onEnabled(@NotNull Context context);
-
-    void onDisable(@NotNull Context context);
-
-    void onDisabled(@NotNull Context context);
-
-    void onDestroy(@NotNull Context context);
-
-    void onDestroyed(@NotNull Context context);
+    void setEventBus(@NotNull EventBus eventBus);
 }

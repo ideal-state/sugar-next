@@ -14,16 +14,12 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.api.context.factory;
+package team.idealstate.minecraft.next.common.context.aware;
 
-import org.bukkit.event.Listener;
-import team.idealstate.minecraft.next.common.context.annotation.NextEventSubscriber;
-import team.idealstate.minecraft.next.common.context.factory.NoArgsConstructorInstanceFactory;
+import team.idealstate.minecraft.next.common.context.ContextHolder;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public class SpigotListenerInstanceFactory
-        extends NoArgsConstructorInstanceFactory<NextEventSubscriber, Listener> {
+public interface ContextHolderAware extends Aware {
 
-    public SpigotListenerInstanceFactory() {
-        super(NextEventSubscriber.class, Listener.class);
-    }
+    void setContextHolder(@NotNull ContextHolder contextHolder);
 }

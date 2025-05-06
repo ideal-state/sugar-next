@@ -49,7 +49,7 @@ public abstract class AbstractInstanceFactory<M extends Annotation, T>
         Validation.notNull(context, "context must not be null.");
         Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNull(marked, "marked must not be null.");
-        Validation.vote(
+        Validation.is(
                 getMetadataClass().isInstance(metadata),
                 "metadata must be an instance of metadataClass.");
         return doCanBeCreated(context, metadata, marked);
@@ -60,9 +60,9 @@ public abstract class AbstractInstanceFactory<M extends Annotation, T>
 
     @NotNull @Override
     public final T create(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
-        Validation.vote(canBeCreated(context, metadata, marked), "instance cannot be created.");
+        Validation.is(canBeCreated(context, metadata, marked), "instance cannot be created.");
         T instance = doCreate(context, metadata, marked);
-        Validation.vote(
+        Validation.is(
                 getInstanceClass().isInstance(instance),
                 "instance must be an instance of instanceClass.");
         return instance;

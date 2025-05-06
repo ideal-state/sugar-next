@@ -21,16 +21,16 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.context.Context;
+import team.idealstate.minecraft.next.common.context.InstanceFactory;
+import team.idealstate.minecraft.next.common.eventbus.Event;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextConfiguration {
+public @interface NextEventSubscriber {
 
     /**
-     * @return 配置文件的 {@link java.net.URI}
-     * @see Context#getResource(String)
+     * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link InstanceFactory} 来决定
      */
-    String value();
+    Class<? extends Event> value() default Event.class;
 }
