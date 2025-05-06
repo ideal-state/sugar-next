@@ -18,6 +18,7 @@ package team.idealstate.minecraft.next.common.function;
 
 import team.idealstate.minecraft.next.common.function.closure.Action;
 import team.idealstate.minecraft.next.common.function.closure.Condition;
+import team.idealstate.minecraft.next.common.function.closure.Function;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 class ConditionFunctional<T> implements Functional<T> {
@@ -62,6 +63,14 @@ class ConditionFunctional<T> implements Functional<T> {
         if (condition()) {
             Functional.super.use(action);
         }
+    }
+
+    @Override
+    public <R> R use(@NotNull Class<R> returnType, @NotNull Function<T, R> function) {
+        if (condition()) {
+            return Functional.super.use(returnType, function);
+        }
+        return null;
     }
 
     @Override

@@ -81,10 +81,15 @@ public interface Functional<T> {
 
     default void use(@NotNull Action<T> action) {
         Validation.notNull(action, "action must not be null.");
+        use(Void.class, action);
+    }
+
+    default <R> R use(@NotNull Class<R> returnType, @NotNull Function<T, R> function) {
+        Validation.notNull(function, "function must not be null.");
         T it = it();
         try {
             try {
-                action.execute(it);
+                return function.call(it);
             } finally {
                 if (it instanceof Closeable) {
                     ((Closeable) it).close();
