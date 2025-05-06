@@ -37,11 +37,11 @@ public final class CommandResult {
         return new CommandResult(true, message);
     }
 
-    @NotNull public static CommandResult fail() {
-        return fail(null);
+    @NotNull public static CommandResult failure() {
+        return failure(null);
     }
 
-    @NotNull public static CommandResult fail(String message) {
+    @NotNull public static CommandResult failure(String message) {
         return new CommandResult(false, message);
     }
 }

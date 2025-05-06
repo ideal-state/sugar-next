@@ -38,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
+import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
@@ -105,8 +106,9 @@ final class SimpleCommandLine implements CommandLine {
                 continue;
             }
             String value = commandHandler.value();
+            String methodName = method.getName();
             if (value.isEmpty()) {
-                value = method.getName();
+                value = methodName;
             }
             String[] arguments = value.split(ARGUMENTS_DELIMITER);
             int variableCount = 0;
@@ -132,6 +134,11 @@ final class SimpleCommandLine implements CommandLine {
             Parameter[] parameters = method.getParameters();
             Map<String, CommandArgument> commandArguments = new HashMap<>(parameters.length);
             for (Parameter parameter : parameters) {
+                Log.debug(
+                        () ->
+                                String.format(
+                                        "%s(...): parameter '%s'",
+                                        methodName, parameter.getName()));
                 CommandArgument commandArgument =
                         parameter.getDeclaredAnnotation(CommandArgument.class);
                 Class<?> parameterType = parameter.getType();
@@ -163,7 +170,10 @@ final class SimpleCommandLine implements CommandLine {
                     CommandArgument commandArgument = commandArguments.get(childName);
                     if (commandArgument == null) {
                         throw new IllegalArgumentException(
-                                "variable parameter must be annotated with @CommandArgument.");
+                                String.format(
+                                        "%s(...): variable parameter '%s' must be annotated with"
+                                                + " @CommandArgument.",
+                                        methodName, childName));
                     }
                     try {
                         Class<? extends CommandArgument.Converter> converterClass =
@@ -352,22 +362,22 @@ final class SimpleCommandLine implements CommandLine {
     public @NotNull CommandResult execute(
             @NotNull CommandContext context, @NotNull String... arguments) throws CommandException {
         if (!validate(context, arguments)) {
-            return CommandResult.fail();
+            return CommandResult.failure();
         }
         List<SimpleCommandLine> acceptedChildren = accept(this, context, depth, arguments);
         if (acceptedChildren.isEmpty()) {
-            return CommandResult.fail();
+            return CommandResult.failure();
         }
         SimpleCommandLine accepted = acceptedChildren.get(acceptedChildren.size() - 1);
         if (accepted == null) {
-            return CommandResult.fail();
+            return CommandResult.failure();
         }
         CommandExecutor executor = accepted.executor;
         if (executor == null) {
-            return CommandResult.fail();
+            return CommandResult.failure();
         }
         if (!validate(context.getSender(), accepted.permission, accepted.open)) {
-            return CommandResult.fail();
+            return CommandResult.failure();
         }
         for (SimpleCommandLine acceptedChild : acceptedChildren) {
             CommandArgument.Converter<?> converter = acceptedChild.converter;
