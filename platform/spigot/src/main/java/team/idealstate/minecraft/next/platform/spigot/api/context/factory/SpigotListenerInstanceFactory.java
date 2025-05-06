@@ -17,7 +17,7 @@
 package team.idealstate.minecraft.next.platform.spigot.api.context.factory;
 
 import org.bukkit.event.Listener;
-import team.idealstate.minecraft.next.common.context.annotation.NextEventSubscriber;
+import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
 import team.idealstate.minecraft.next.common.context.factory.NoArgsConstructorInstanceFactory;
 
 public class SpigotListenerInstanceFactory
