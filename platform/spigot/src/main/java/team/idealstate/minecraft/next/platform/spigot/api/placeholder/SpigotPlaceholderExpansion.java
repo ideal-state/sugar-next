@@ -36,13 +36,12 @@ import team.idealstate.minecraft.next.platform.spigot.api.command.SpigotCommandS
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SpigotPlaceholderExpansion extends PlaceholderExpansion {
 
-    public static final String HEADER_DELIMITER = ":";
     public static final String ARGUMENTS_DELIMITER = "_";
+    public static final String ARGUMENTS_DELIMITER_1 = ":";
     @NonNull @Getter private final String identifier;
     @NonNull @Getter private final String author;
     @NonNull @Getter private final String version;
     @NonNull @Getter private final CommandLine commandLine;
-    private String header = null;
 
     public static SpigotPlaceholderExpansion of(
             @NotNull String identifier,
@@ -50,25 +49,18 @@ public final class SpigotPlaceholderExpansion extends PlaceholderExpansion {
             @NotNull String version,
             @NotNull Object command) {
         Validation.notNull(command, "command must not be null.");
+        ;
         return new SpigotPlaceholderExpansion(
                 identifier, author, version, CommandLine.of(identifier, command));
     }
 
-    @NotNull private String header() {
-        if (header == null) {
-            this.header = getIdentifier() + HEADER_DELIMITER;
-        }
-        return header;
-    }
-
     @Nullable private String[] argumentsOf(@NotNull String params) {
         Validation.notNull(params, "params must not be null.");
-        String header = header();
-        if (params.isEmpty() || !params.toLowerCase().startsWith(header.toLowerCase())) {
+        if (params.isEmpty()) {
             return null;
         }
-        params = params.substring(header.length());
-        return params.split(ARGUMENTS_DELIMITER, -1);
+        return params.replace(ARGUMENTS_DELIMITER_1, ARGUMENTS_DELIMITER)
+                .split(ARGUMENTS_DELIMITER, -1);
     }
 
     @Override
