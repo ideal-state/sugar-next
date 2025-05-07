@@ -37,5 +37,5 @@ public @interface Configuration {
      * @return 配置文件的 {@link java.net.URI}
      * @see Context#getResource(String)
      */
-    String resource();
+    String uri();
 }

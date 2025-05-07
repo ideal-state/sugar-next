@@ -14,13 +14,18 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.factory;
+package team.idealstate.minecraft.next.common.context;
 
-import team.idealstate.minecraft.next.common.context.annotation.component.Component;
+import java.lang.annotation.Annotation;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class ComponentInstanceFactory
-        extends NoArgsConstructorInstanceFactory<Component, Object> {
-    public ComponentInstanceFactory() {
-        super(Component.class, Object.class);
-    }
+public interface BeanFactory<M extends Annotation, T> {
+
+    @NotNull Class<M> getMetadataType();
+
+    @NotNull Class<T> getInstanceType();
+
+    boolean canBeCreated(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
+
+    @NotNull T create(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
 }

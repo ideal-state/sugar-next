@@ -22,9 +22,9 @@ import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public abstract class NoArgsConstructorInstanceFactory<M extends Annotation, T>
-        extends AbstractInstanceFactory<M, T> {
-    protected NoArgsConstructorInstanceFactory(
+public abstract class NoArgsConstructorBeanFactory<M extends Annotation, T>
+        extends AbstractBeanFactory<M, T> {
+    protected NoArgsConstructorBeanFactory(
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
         super(metadataClass, instanceClass);
     }
@@ -32,24 +32,14 @@ public abstract class NoArgsConstructorInstanceFactory<M extends Annotation, T>
     @Override
     protected boolean doCanBeCreated(
             @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
-        if (!getInstanceClass().isAssignableFrom(marked)) {
-            Log.warn(
-                    () ->
-                            getMetadataClass().getSimpleName()
-                                    + ": "
-                                    + marked.getName()
-                                    + " is not assignable to "
-                                    + getInstanceClass().getName());
+        if (!getInstanceType().isAssignableFrom(marked)) {
+            Log.warn(String.format("%s: %s is not assignable to %s.", getMetadataType().getSimpleName(), marked.getName(), getInstanceType().getName()));
             return false;
         }
         try {
             marked.getConstructor();
         } catch (NoSuchMethodException e) {
-            Log.warn(
-                    () ->
-                            getMetadataClass().getSimpleName()
-                                    + ": No default constructor found in "
-                                    + marked.getName());
+            Log.warn(String.format("%s: %s has no default constructor.", getMetadataType().getSimpleName(), marked.getName()));
             return false;
         }
         return true;

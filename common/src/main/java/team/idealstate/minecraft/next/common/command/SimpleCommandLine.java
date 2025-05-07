@@ -86,9 +86,8 @@ final class SimpleCommandLine implements CommandLine {
                 new SimpleCommandLine(
                         ROOT_DEPTH, name, Collections.singletonList(name), true, null, completer);
         lazyRoot.set(root);
-        completer = null;
-        Class<?> commandClass = command.getClass();
-        Method[] methods = commandClass.getMethods();
+        Class<?> commandType = command.getClass();
+        Method[] methods = commandType.getMethods();
         if (methods.length == 0) {
             return root;
         }
@@ -195,7 +194,7 @@ final class SimpleCommandLine implements CommandLine {
                             String completerMethodName = commandArgument.completerMethod();
                             if (!completerMethodName.isEmpty()) {
                                 Method completerMethod =
-                                        commandClass.getMethod(
+                                        commandType.getMethod(
                                                 completerMethodName,
                                                 CommandContext.class,
                                                 String.class);

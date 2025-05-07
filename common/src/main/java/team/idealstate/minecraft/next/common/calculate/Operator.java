@@ -72,8 +72,8 @@ public enum Operator implements Symbol {
         if (number instanceof BigInteger) {
             return (BigInteger) number;
         }
-        Class<? extends Number> numberClass = number.getClass();
-        if (INTEGER_CLASSES.contains(numberClass)) {
+        Class<? extends Number> numberType = number.getClass();
+        if (INTEGER_CLASSES.contains(numberType)) {
             return BigInteger.valueOf(number.longValue());
         }
         return new BigInteger(number.toString());

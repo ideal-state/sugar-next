@@ -67,21 +67,21 @@ public interface Context {
 
     void destroy();
 
-    @Nullable <M extends Annotation> InstanceFactory<M, ?> instanceFactoryBy(@NotNull Class<M> metadataClass);
+    @Nullable <M extends Annotation> BeanFactory<M, ?> getBeanFactory(@NotNull Class<M> metadataType);
 
-    @Nullable <M extends Annotation, T> InstanceFactory<M, T> instanceFactoryBy(
-            @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
+    @Nullable <M extends Annotation, T> BeanFactory<M, T> getBeanFactory(
+            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
 
-    <M extends Annotation> void setInstanceFactory(
-            @NotNull Class<M> metadataClass, InstanceFactory<M, ?> componentFactory);
+    <M extends Annotation> void setBeanFactory(
+            @NotNull Class<M> metadataType, BeanFactory<M, ?> beanFactory);
 
-    @Nullable <M extends Annotation> Bean<M, ?> componentBy(@NotNull Class<M> metadataClass);
+    @Nullable <M extends Annotation> Bean<M, ?> getBean(@NotNull Class<M> metadataType);
 
-    @Nullable <M extends Annotation, T> Bean<M, T> componentBy(
-            @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
+    @Nullable <M extends Annotation, T> Bean<M, T> getBean(
+            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
 
-    @NotNull <M extends Annotation> List<Bean<M, ?>> componentsBy(@NotNull Class<M> metadataClass);
+    @NotNull <M extends Annotation> List<Bean<M, ?>> getBeans(@NotNull Class<M> metadataType);
 
-    @NotNull <M extends Annotation, T> List<Bean<M, T>> componentsBy(
-            @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
+    @NotNull <M extends Annotation, T> List<Bean<M, T>> getBeans(
+            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
 }

@@ -14,18 +14,11 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context;
+package team.idealstate.minecraft.next.common.context.aware;
 
-import java.lang.annotation.Annotation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public interface InstanceFactory<M extends Annotation, T> {
+public interface MarkedAware extends Aware {
 
-    @NotNull Class<M> getMetadataClass();
-
-    @NotNull Class<T> getInstanceClass();
-
-    boolean canBeCreated(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
-
-    @NotNull T create(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
+    void setMarkedClass(@NotNull Class<?> marked);
 }

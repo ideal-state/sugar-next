@@ -14,11 +14,13 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.aware;
+package team.idealstate.minecraft.next.common.context.factory;
 
-import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 
-public interface MarkedClassAware extends Aware {
-
-    void setMarkedClass(@NotNull Class<?> markedClass);
+public final class SubscriberBeanFactory
+        extends NoArgsConstructorBeanFactory<Subscriber, Object> {
+    public SubscriberBeanFactory() {
+        super(Subscriber.class, Object.class);
+    }
 }

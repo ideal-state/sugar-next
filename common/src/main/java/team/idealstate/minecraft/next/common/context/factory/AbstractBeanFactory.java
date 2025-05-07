@@ -21,25 +21,25 @@ import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.minecraft.next.common.context.Context;
-import team.idealstate.minecraft.next.common.context.InstanceFactory;
+import team.idealstate.minecraft.next.common.context.BeanFactory;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class AbstractInstanceFactory<M extends Annotation, T>
-        implements InstanceFactory<M, T> {
+public abstract class AbstractBeanFactory<M extends Annotation, T>
+        implements BeanFactory<M, T> {
 
-    @NonNull private final Class<M> metadataClass;
-    @NonNull private final Class<T> instanceClass;
+    @NonNull private final Class<M> metadataType;
+    @NonNull private final Class<T> instanceType;
 
     @NotNull @Override
-    public final Class<M> getMetadataClass() {
-        return metadataClass;
+    public final Class<M> getMetadataType() {
+        return metadataType;
     }
 
     @NotNull @Override
-    public final Class<T> getInstanceClass() {
-        return instanceClass;
+    public final Class<T> getInstanceType() {
+        return instanceType;
     }
 
     protected abstract boolean doCanBeCreated(
@@ -51,9 +51,10 @@ public abstract class AbstractInstanceFactory<M extends Annotation, T>
         Validation.notNull(context, "context must not be null.");
         Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNull(marked, "marked must not be null.");
+        Class<M> metadataType = getMetadataType();
         Validation.is(
-                getMetadataClass().isInstance(metadata),
-                "metadata must be an instance of metadataClass.");
+                metadataType.isInstance(metadata),
+                String.format("metadata '%s' must be an instance of metadataType '%s'.", metadata, metadataType));
         return doCanBeCreated(context, metadata, marked);
     }
 
@@ -64,9 +65,10 @@ public abstract class AbstractInstanceFactory<M extends Annotation, T>
     public final T create(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
         Validation.is(canBeCreated(context, metadata, marked), "instance cannot be created.");
         T instance = doCreate(context, metadata, marked);
+        Class<T> instanceType = getInstanceType();
         Validation.is(
-                getInstanceClass().isInstance(instance),
-                "instance must be an instance of instanceClass.");
+                instanceType.isInstance(instance),
+                String.format("instance '%s' must be an instance of instanceType '%s'.", instance, instanceType));
         return instance;
     }
 }

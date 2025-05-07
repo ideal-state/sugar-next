@@ -38,7 +38,7 @@ import team.idealstate.minecraft.next.common.context.annotation.component.Contro
 import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.platform.spigot.api.command.SpigotCommand;
-import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotSubscriberInstanceFactory;
+import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotSubscriberBeanFactory;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.SpigotPlaceholderExpansion;
 
@@ -67,7 +67,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     @Override
     public final void onLoad() {
         super.onLoad();
-        context.setInstanceFactory(Subscriber.class, new SpigotSubscriberInstanceFactory());
+        context.setBeanFactory(Subscriber.class, new SpigotSubscriberBeanFactory());
         context.load();
     }
 
@@ -90,7 +90,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
 
     private void registerCommands() {
         List<Bean<Controller, Command>> beans =
-                context.componentsBy(Controller.class, Command.class);
+                context.getBeans(Controller.class, Command.class);
         if (beans.isEmpty()) {
             return;
         }
@@ -121,7 +121,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
         public void onPlaceholderAPIEnabled(PluginEnableEvent event) {
             if (PLACEHOLDER_API.equals(event.getPlugin().getName())) {
                 List<Bean<Controller, Placeholder>> beans =
-                        context.componentsBy(Controller.class, Placeholder.class);
+                        context.getBeans(Controller.class, Placeholder.class);
                 if (beans.isEmpty()) {
                     return;
                 }
@@ -139,7 +139,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
 
     private void registerEventListeners(PluginManager pluginManager) {
         List<Bean<Subscriber, Listener>> beans =
-                context.componentsBy(Subscriber.class, Listener.class);
+                context.getBeans(Subscriber.class, Listener.class);
         if (beans.isEmpty()) {
             return;
         }

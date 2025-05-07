@@ -21,7 +21,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.context.InstanceFactory;
+import team.idealstate.minecraft.next.common.context.BeanFactory;
 import team.idealstate.minecraft.next.common.eventbus.Event;
 
 @Target({ElementType.TYPE})
@@ -35,7 +35,7 @@ public @interface Subscriber {
     String value() default "";
 
     /**
-     * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link InstanceFactory} 来决定
+     * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link BeanFactory} 来决定
      */
     Class<? extends Event> event() default Event.class;
 }

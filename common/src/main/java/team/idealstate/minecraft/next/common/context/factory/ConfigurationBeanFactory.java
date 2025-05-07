@@ -20,6 +20,8 @@ import static team.idealstate.minecraft.next.common.function.Functional.function
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Objects;
 import org.yaml.snakeyaml.Yaml;
 import team.idealstate.minecraft.next.common.context.Context;
@@ -30,26 +32,23 @@ import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class ConfigurationInstanceFactory
-        extends AbstractInstanceFactory<Configuration, Object> {
+public final class ConfigurationBeanFactory
+        extends AbstractBeanFactory<Configuration, Object> {
 
     private final Lazy<Yaml> lazy = Lazy.of(Yaml::new);
 
-    public ConfigurationInstanceFactory() {
+    public ConfigurationBeanFactory() {
         super(Configuration.class, Object.class);
     }
 
     @Override
     protected boolean doCanBeCreated(
             @NotNull Context context, @NotNull Configuration metadata, @NotNull Class<?> marked) {
-        String path = metadata.value();
-        if (StringUtils.isNullOrBlank(path)) {
-            Log.warn(
-                    () ->
-                            getMetadataClass().getSimpleName()
-                                    + ": Invalid configuration path: "
-                                    + path);
-            return false;
+        String uri = metadata.uri();
+        try {
+            new URI(uri);
+        } catch (URISyntaxException e) {
+            Log.warn(String.format("%s: Invalid configuration uri '%s'. (%s)", getMetadataType().getSimpleName(), uri, e.getMessage()));
         }
         return true;
     }
