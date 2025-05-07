@@ -17,27 +17,48 @@
 package team.idealstate.minecraft.next.common.command;
 
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
+import team.idealstate.minecraft.next.common.command.annotation.CommandArgument.ConverterResult;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
+import team.idealstate.minecraft.next.common.command.exception.CommandException;
+import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-final class SimpleCommandArgumentConverter implements CommandArgument.Converter<String> {
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
-    public static final SimpleCommandArgumentConverter INSTANCE =
-            new SimpleCommandArgumentConverter();
+final class SimpleCommandArgumentConverter<T> extends CommandArgument.AbstractConverter<T> {
 
-    @Override
-    public @NotNull Class<String> getTargetType() {
-        return String.class;
+    private final Object command;
+    private final Method method;
+
+    SimpleCommandArgumentConverter(@NotNull Class<T> targetType, @NotNull Object command, @NotNull Method method) {
+        super(targetType);
+        Validation.notNull(command, "command cannot be null.");
+        Validation.notNull(method, "method cannot be null.");
+        this.command = command;
+        this.method = method;
     }
 
     @Override
-    public @NotNull String doConvert(@NotNull CommandContext context, @NotNull String argument)
+    @SuppressWarnings({"unchecked"})
+    protected @NotNull ConverterResult<T> doConvert(@NotNull CommandContext context, @NotNull String argument)
             throws CommandArgumentConversionException {
-        return argument;
+        try {
+            ConverterResult<T> result = (ConverterResult<T>) method.invoke(command, context, argument, true);
+            return Validation.requireNotNull(result, "converter result cannot be null.");
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new CommandException(e);
+        }
     }
 
     @Override
-    public boolean canCovert(@NotNull CommandContext context, @NotNull String argument) {
-        return true;
+    @SuppressWarnings({"unchecked"})
+    protected boolean canBeConvert(@NotNull CommandContext context, @NotNull String argument) {
+        try {
+            ConverterResult<T> result = (ConverterResult<T>) method.invoke(command, context, argument, false);
+            return Validation.requireNotNull(result, "converter result cannot be null.").isSuccess();
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new CommandException(e);
+        }
     }
 }
