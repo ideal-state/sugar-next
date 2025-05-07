@@ -69,6 +69,7 @@ import team.idealstate.minecraft.next.common.context.aware.Aware;
 import team.idealstate.minecraft.next.common.context.aware.ContextAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.context.aware.EventBusAware;
+import team.idealstate.minecraft.next.common.context.aware.MarkedClassAware;
 import team.idealstate.minecraft.next.common.context.aware.MetadataAware;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.context.factory.NextCommandInstanceFactory;
@@ -561,6 +562,9 @@ final class SimpleContext implements Context {
             }
             if (instance instanceof MetadataAware) {
                 ((MetadataAware) instance).setMetadata(metadata);
+            }
+            if (instance instanceof MarkedClassAware) {
+                ((MarkedClassAware) instance).setMarkedClass(marked);
             }
             if (instance instanceof ContextHolderAware) {
                 ((ContextHolderAware) instance).setContextHolder(contextHolder);
