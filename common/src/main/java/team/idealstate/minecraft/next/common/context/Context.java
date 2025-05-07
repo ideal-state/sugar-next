@@ -73,7 +73,7 @@ public interface Context {
             @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
 
     <M extends Annotation> void setBeanFactory(
-            @NotNull Class<M> metadataType, BeanFactory<M, ?> beanFactory);
+            @NotNull Class<M> metadataType, @Nullable BeanFactory<M, ?> beanFactory);
 
     @Nullable <M extends Annotation> Bean<M, ?> getBean(@NotNull Class<M> metadataType);
 

@@ -356,7 +356,7 @@ final class SimpleContext implements Context {
 
     @Override
     public <M extends Annotation> void setBeanFactory(
-            @NotNull Class<M> metadataType, BeanFactory<M, ?> beanFactory) {
+            @NotNull Class<M> metadataType, @Nullable BeanFactory<M, ?> beanFactory) {
         Validation.notNull(metadataType, "metadataType must not be null");
         Validation.is(
                 !Laziness.class.isAssignableFrom(metadataType),
