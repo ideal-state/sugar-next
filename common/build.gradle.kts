@@ -5,6 +5,10 @@ dependencies {
 
     internal(libs.asm)
     internal(libs.snakeyaml)
+    internal(libs.hikariCP)
+    internal(libs.mybatis)
+    internal(libs.jedis)
+    internal(libs.byte.buddy)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)

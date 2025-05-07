@@ -7,6 +7,10 @@ placeholderapi = "2.11.6"
 lombok = "1.18.38"
 log4j = "2.24.3"
 slf4j = "2.0.17"
+hikariCP = "4.0.3"
+mybatis = "3.5.19"
+jedis = "6.0.0"
+byte-buddy = "1.17.5"
 
 [plugins]
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
@@ -19,3 +23,7 @@ placeholderapi = { group = "me.clip", name = "placeholderapi", version.ref = "pl
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 log4j-api = { group = "org.apache.logging.log4j", name = "log4j-api", version.ref = "log4j" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+hikariCP = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikariCP" }
+mybatis = { group = "org.mybatis", name = "mybatis", version.ref = "mybatis" }
+jedis = { group = "redis.clients", name = "jedis", version.ref = "jedis" }
+byte-buddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byte-buddy" }
