@@ -22,6 +22,7 @@ import team.idealstate.minecraft.next.common.function.closure.Action;
 import team.idealstate.minecraft.next.common.function.closure.Condition;
 import team.idealstate.minecraft.next.common.function.closure.Function;
 import team.idealstate.minecraft.next.common.function.closure.Provider;
+import team.idealstate.minecraft.next.common.function.data.Pair;
 import team.idealstate.minecraft.next.common.function.exception.FunctionExecutionException;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
@@ -43,6 +44,10 @@ public interface Functional<T> {
     @NotNull static <V> Lazy<V> lazy(@NotNull Provider<V> provider) {
         Validation.notNull(provider, "provider must not be null.");
         return Lazy.of(provider);
+    }
+
+    @NotNull static <F, S> Pair<F, S> pair(F first, S second) {
+        return Pair.of(first, second);
     }
 
     T it();
