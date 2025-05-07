@@ -66,7 +66,7 @@ public interface Context {
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
 
     <M extends Annotation> void setInstanceFactory(
-            @NotNull Class<M> metadataClass, @NotNull InstanceFactory<M, ?> componentFactory);
+            @NotNull Class<M> metadataClass, InstanceFactory<M, ?> componentFactory);
 
     @Nullable <M extends Annotation> Component<M, ?> componentBy(@NotNull Class<M> metadataClass);
 

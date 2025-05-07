@@ -343,18 +343,21 @@ final class SimpleContext implements Context {
 
     @Override
     public <M extends Annotation> void setInstanceFactory(
-            @NotNull Class<M> metadataClass, @NotNull InstanceFactory<M, ?> componentFactory) {
+            @NotNull Class<M> metadataClass, InstanceFactory<M, ?> instanceFactory) {
         Validation.notNull(metadataClass, "metadataClass must not be null");
         Validation.is(
                 !NextLazy.class.isAssignableFrom(metadataClass),
                 "metadataClass must not be NextLazy");
-        Validation.notNull(componentFactory, "componentFactory must not be null");
-        Class<M> factoryMetadataClass = componentFactory.getMetadataClass();
-        Validation.notNull(factoryMetadataClass, "factoryMetadataClass must not be null");
-        Validation.is(
-                factoryMetadataClass.isAssignableFrom(metadataClass),
-                "metadataClass must be assignable to factoryMetadataClass");
-        instanceFactories.put(metadataClass, componentFactory);
+        Validation.notNull(instanceFactory, "instanceFactory must not be null");
+        if (instanceFactory != null) {
+            Class<M> factoryMetadataClass = instanceFactory.getMetadataClass();
+            Validation.is(
+                    factoryMetadataClass.isAssignableFrom(metadataClass),
+                    "metadataClass must be assignable to factoryMetadataClass");
+            instanceFactories.put(metadataClass, instanceFactory);
+        } else {
+            instanceFactories.remove(metadataClass);
+        }
     }
 
     private final Map<Class<? extends Annotation>, Deque<Class<?>>> markedClasses =
