@@ -22,29 +22,26 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Objects;
 import org.yaml.snakeyaml.Yaml;
-import team.idealstate.minecraft.next.common.context.AbstractInstanceFactory;
 import team.idealstate.minecraft.next.common.context.Context;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextConfiguration;
+import team.idealstate.minecraft.next.common.context.annotation.component.Configuration;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class NextConfigurationYamlInstanceFactory
-        extends AbstractInstanceFactory<NextConfiguration, Object> {
+public final class ConfigurationInstanceFactory
+        extends AbstractInstanceFactory<Configuration, Object> {
 
     private final Lazy<Yaml> lazy = Lazy.of(Yaml::new);
 
-    public NextConfigurationYamlInstanceFactory() {
-        super(NextConfiguration.class, Object.class);
+    public ConfigurationInstanceFactory() {
+        super(Configuration.class, Object.class);
     }
 
     @Override
     protected boolean doCanBeCreated(
-            @NotNull Context context,
-            @NotNull NextConfiguration metadata,
-            @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull Configuration metadata, @NotNull Class<?> marked) {
         String path = metadata.value();
         if (StringUtils.isNullOrBlank(path)) {
             Log.warn(
@@ -59,9 +56,7 @@ public final class NextConfigurationYamlInstanceFactory
 
     @NotNull @Override
     protected Object doCreate(
-            @NotNull Context context,
-            @NotNull NextConfiguration metadata,
-            @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull Configuration metadata, @NotNull Class<?> marked) {
         try {
             return functional(context.getResource(metadata.value()))
                     .when(Objects::nonNull)

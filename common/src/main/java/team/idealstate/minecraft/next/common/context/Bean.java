@@ -19,7 +19,7 @@ package team.idealstate.minecraft.next.common.context;
 import java.lang.annotation.Annotation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public interface Component<M extends Annotation, T> {
+public interface Bean<M extends Annotation, T> {
 
     @NotNull M getMetadata();
 

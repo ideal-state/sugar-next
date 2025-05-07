@@ -21,13 +21,13 @@ import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-final class SimpleComponent<M extends Annotation, T> implements Component<M, T> {
+final class SimpleBean<M extends Annotation, T> implements Bean<M, T> {
 
     private final M metadata;
     private final Lazy<T> lazy;
     private final boolean initialized;
 
-    SimpleComponent(@NotNull M metadata, @NotNull T instance) {
+    SimpleBean(@NotNull M metadata, @NotNull T instance) {
         Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNull(instance, "instance must not be null.");
         this.metadata = metadata;
@@ -35,7 +35,7 @@ final class SimpleComponent<M extends Annotation, T> implements Component<M, T> 
         this.initialized = true;
     }
 
-    SimpleComponent(@NotNull M metadata, @NotNull Lazy<T> lazy) {
+    SimpleBean(@NotNull M metadata, @NotNull Lazy<T> lazy) {
         Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNull(lazy, "lazy must not be null.");
         this.metadata = metadata;

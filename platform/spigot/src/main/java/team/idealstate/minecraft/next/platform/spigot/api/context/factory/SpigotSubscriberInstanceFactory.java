@@ -14,18 +14,16 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.factory;
+package team.idealstate.minecraft.next.platform.spigot.api.context.factory;
 
-import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
-import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import org.bukkit.event.Listener;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
+import team.idealstate.minecraft.next.common.context.factory.NoArgsConstructorInstanceFactory;
 
-public final class NextPlaceholderInstanceFactory extends CommandInstanceFactory<NextPlaceholder> {
-    public NextPlaceholderInstanceFactory() {
-        super(NextPlaceholder.class);
-    }
+public final class SpigotSubscriberInstanceFactory
+        extends NoArgsConstructorInstanceFactory<Subscriber, Listener> {
 
-    @NotNull @Override
-    protected String getCommandName(@NotNull NextPlaceholder metadata) {
-        return metadata.value();
+    public SpigotSubscriberInstanceFactory() {
+        super(Subscriber.class, Listener.class);
     }
 }

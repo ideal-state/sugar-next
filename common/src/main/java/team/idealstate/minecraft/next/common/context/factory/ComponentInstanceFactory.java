@@ -16,16 +16,11 @@
 
 package team.idealstate.minecraft.next.common.context.factory;
 
-import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
-import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.context.annotation.component.Component;
 
-public final class NextCommandInstanceFactory extends CommandInstanceFactory<NextCommand> {
-    public NextCommandInstanceFactory() {
-        super(NextCommand.class);
-    }
-
-    @NotNull @Override
-    protected String getCommandName(@NotNull NextCommand metadata) {
-        return metadata.value();
+public final class ComponentInstanceFactory
+        extends NoArgsConstructorInstanceFactory<Component, Object> {
+    public ComponentInstanceFactory() {
+        super(Component.class, Object.class);
     }
 }

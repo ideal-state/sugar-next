@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation.component;
+package team.idealstate.minecraft.next.common.context.annotation.feature;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -25,4 +25,4 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextComponent {}
+public @interface Laziness {}

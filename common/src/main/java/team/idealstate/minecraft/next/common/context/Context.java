@@ -32,6 +32,7 @@ import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 public interface Context {
 
     String RESOURCE_BUNDLED = "bundled:";
+    String PROPERTY_ENVIRONMENT_KEY = "minecraftnext.environment";
 
     @NotNull static Context of(
             @NotNull ContextHolder contextHolder,
@@ -39,6 +40,12 @@ public interface Context {
             @NotNull EventBus eventBus) {
         return new SimpleContext(contextHolder, contextLifecycle, eventBus);
     }
+
+    /**
+     * @return 上下文所处的环境
+     * @see #PROPERTY_ENVIRONMENT_KEY
+     */
+    @NotNull String getEnvironment();
 
     @NotNull String getName();
 
@@ -68,13 +75,13 @@ public interface Context {
     <M extends Annotation> void setInstanceFactory(
             @NotNull Class<M> metadataClass, InstanceFactory<M, ?> componentFactory);
 
-    @Nullable <M extends Annotation> Component<M, ?> componentBy(@NotNull Class<M> metadataClass);
+    @Nullable <M extends Annotation> Bean<M, ?> componentBy(@NotNull Class<M> metadataClass);
 
-    @Nullable <M extends Annotation, T> Component<M, T> componentBy(
+    @Nullable <M extends Annotation, T> Bean<M, T> componentBy(
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
 
-    @NotNull <M extends Annotation> List<Component<M, ?>> componentsBy(@NotNull Class<M> metadataClass);
+    @NotNull <M extends Annotation> List<Bean<M, ?>> componentsBy(@NotNull Class<M> metadataClass);
 
-    @NotNull <M extends Annotation, T> List<Component<M, T>> componentsBy(
+    @NotNull <M extends Annotation, T> List<Bean<M, T>> componentsBy(
             @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass);
 }

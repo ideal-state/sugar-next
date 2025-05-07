@@ -14,25 +14,27 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.example;
+package team.idealstate.minecraft.next.platform.spigot.controller;
 
 import java.util.Arrays;
 import java.util.List;
 import team.idealstate.minecraft.next.common.banner.Banner;
+import team.idealstate.minecraft.next.common.command.Command;
 import team.idealstate.minecraft.next.common.command.CommandContext;
 import team.idealstate.minecraft.next.common.command.CommandResult;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
 import team.idealstate.minecraft.next.common.context.ContextHolder;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
+import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 
-@NextCommand("minecraftnext")
-@NextPlaceholder("minecraftnext")
-public final class ExampleNextCommand implements ContextHolderAware {
+@Controller("minecraftnext")
+@Environment("DEBUG")
+public final class ExampleController implements ContextHolderAware, Command, Placeholder {
 
     @CommandHandler
     public CommandResult show() {
@@ -43,7 +45,7 @@ public final class ExampleNextCommand implements ContextHolderAware {
     @CommandHandler("show {message}")
     public CommandResult show(@CommandArgument(completerMethod = "messages") String message) {
         Log.info(String.format("show(String): %s", message));
-        return CommandResult.success();
+        return CommandResult.success(message);
     }
 
     public List<String> messages(CommandContext context, String argument) {

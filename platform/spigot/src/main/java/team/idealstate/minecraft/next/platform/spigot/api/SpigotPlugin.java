@@ -29,16 +29,17 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
-import team.idealstate.minecraft.next.common.context.Component;
+import team.idealstate.minecraft.next.common.command.Command;
+import team.idealstate.minecraft.next.common.context.Bean;
 import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.context.ContextHolder;
 import team.idealstate.minecraft.next.common.context.ContextLifecycle;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
+import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.platform.spigot.api.command.SpigotCommand;
-import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotListenerInstanceFactory;
+import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotSubscriberInstanceFactory;
+import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.SpigotPlaceholderExpansion;
 
 public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, ContextLifecycle {
@@ -66,7 +67,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     @Override
     public final void onLoad() {
         super.onLoad();
-        context.setInstanceFactory(NextEventSubscriber.class, new SpigotListenerInstanceFactory());
+        context.setInstanceFactory(Subscriber.class, new SpigotSubscriberInstanceFactory());
         context.load();
     }
 
@@ -88,18 +89,19 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     }
 
     private void registerCommands() {
-        List<Component<NextCommand, ?>> components = context.componentsBy(NextCommand.class);
-        if (components.isEmpty()) {
+        List<Bean<Controller, Command>> beans =
+                context.componentsBy(Controller.class, Command.class);
+        if (beans.isEmpty()) {
             return;
         }
-        for (Component<NextCommand, ?> component : components) {
-            NextCommand metadata = component.getMetadata();
+        for (Bean<Controller, Command> bean : beans) {
+            Controller metadata = bean.getMetadata();
             String name = metadata.value();
             PluginCommand pluginCommand = getCommand(name);
             if (pluginCommand == null) {
                 continue;
             }
-            Object instance = component.getInstance();
+            Command instance = bean.getInstance();
             SpigotCommand spigotCommand = SpigotCommand.of(name, instance);
             pluginCommand.setExecutor(spigotCommand);
             pluginCommand.setTabCompleter(spigotCommand);
@@ -118,16 +120,16 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
         @EventHandler(priority = EventPriority.LOWEST)
         public void onPlaceholderAPIEnabled(PluginEnableEvent event) {
             if (PLACEHOLDER_API.equals(event.getPlugin().getName())) {
-                List<Component<NextPlaceholder, ?>> components =
-                        context.componentsBy(NextPlaceholder.class);
-                if (components.isEmpty()) {
+                List<Bean<Controller, Placeholder>> beans =
+                        context.componentsBy(Controller.class, Placeholder.class);
+                if (beans.isEmpty()) {
                     return;
                 }
                 String author = context.getName();
                 String version = context.getVersion();
-                for (Component<NextPlaceholder, ?> component : components) {
-                    NextPlaceholder metadata = component.getMetadata();
-                    Object instance = component.getInstance();
+                for (Bean<Controller, Placeholder> bean : beans) {
+                    Controller metadata = bean.getMetadata();
+                    Placeholder instance = bean.getInstance();
                     SpigotPlaceholderExpansion.of(metadata.value(), author, version, instance)
                             .register();
                 }
@@ -136,13 +138,13 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     }
 
     private void registerEventListeners(PluginManager pluginManager) {
-        List<Component<NextEventSubscriber, Listener>> components =
-                context.componentsBy(NextEventSubscriber.class, Listener.class);
-        if (components.isEmpty()) {
+        List<Bean<Subscriber, Listener>> beans =
+                context.componentsBy(Subscriber.class, Listener.class);
+        if (beans.isEmpty()) {
             return;
         }
-        for (Component<NextEventSubscriber, Listener> component : components) {
-            Listener instance = component.getInstance();
+        for (Bean<Subscriber, Listener> bean : beans) {
+            Listener instance = bean.getInstance();
             pluginManager.registerEvents(instance, this);
         }
     }

@@ -14,23 +14,23 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation.component;
+package team.idealstate.minecraft.next.common.context.annotation.feature;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.command.CommandLine;
+import team.idealstate.minecraft.next.common.context.Context;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextPlaceholder {
+public @interface Environment {
 
     /**
-     * @return 占位符的主要名称（标识符），为 "" 时则使用类名
-     * @see CommandLine#validateName(String)
+     * @return 用于标识组件的生效环境，为 "" 时表示所有环境
+     * @see Context#getEnvironment()
      */
     String value() default "";
 }

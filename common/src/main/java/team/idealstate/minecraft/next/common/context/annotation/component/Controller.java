@@ -14,13 +14,21 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.factory;
+package team.idealstate.minecraft.next.common.context.annotation.component;
 
-import team.idealstate.minecraft.next.common.context.annotation.component.NextComponent;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public final class NextComponentInstanceFactory
-        extends NoArgsConstructorInstanceFactory<NextComponent, Object> {
-    public NextComponentInstanceFactory() {
-        super(NextComponent.class, Object.class);
-    }
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Controller {
+
+    /**
+     * @return 控制器的主要名称（标识符），为 "" 时则使用类名
+     */
+    String value() default "";
 }

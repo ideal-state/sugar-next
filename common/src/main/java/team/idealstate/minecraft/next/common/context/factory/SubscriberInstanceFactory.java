@@ -14,16 +14,13 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.api.context.factory;
+package team.idealstate.minecraft.next.common.context.factory;
 
-import org.bukkit.event.Listener;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
-import team.idealstate.minecraft.next.common.context.factory.NoArgsConstructorInstanceFactory;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 
-public class SpigotListenerInstanceFactory
-        extends NoArgsConstructorInstanceFactory<NextEventSubscriber, Listener> {
-
-    public SpigotListenerInstanceFactory() {
-        super(NextEventSubscriber.class, Listener.class);
+public final class SubscriberInstanceFactory
+        extends NoArgsConstructorInstanceFactory<Subscriber, Object> {
+    public SubscriberInstanceFactory() {
+        super(Subscriber.class, Object.class);
     }
 }

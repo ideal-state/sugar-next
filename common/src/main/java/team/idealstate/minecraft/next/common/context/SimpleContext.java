@@ -59,12 +59,12 @@ import team.idealstate.minecraft.next.common.bytecode.JavaCache;
 import team.idealstate.minecraft.next.common.bytecode.api.member.JavaClass;
 import team.idealstate.minecraft.next.common.bytecode.api.struct.JavaAnnotation;
 import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingException;
-import team.idealstate.minecraft.next.common.context.annotation.NextLazy;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextCommand;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextComponent;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextConfiguration;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextPlaceholder;
+import team.idealstate.minecraft.next.common.context.annotation.component.Component;
+import team.idealstate.minecraft.next.common.context.annotation.component.Configuration;
+import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Laziness;
 import team.idealstate.minecraft.next.common.context.aware.Aware;
 import team.idealstate.minecraft.next.common.context.aware.ContextAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
@@ -72,11 +72,10 @@ import team.idealstate.minecraft.next.common.context.aware.EventBusAware;
 import team.idealstate.minecraft.next.common.context.aware.MarkedClassAware;
 import team.idealstate.minecraft.next.common.context.aware.MetadataAware;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
-import team.idealstate.minecraft.next.common.context.factory.NextCommandInstanceFactory;
-import team.idealstate.minecraft.next.common.context.factory.NextComponentInstanceFactory;
-import team.idealstate.minecraft.next.common.context.factory.NextConfigurationYamlInstanceFactory;
-import team.idealstate.minecraft.next.common.context.factory.NextEventSubscriberInstanceFactory;
-import team.idealstate.minecraft.next.common.context.factory.NextPlaceholderInstanceFactory;
+import team.idealstate.minecraft.next.common.context.factory.ComponentInstanceFactory;
+import team.idealstate.minecraft.next.common.context.factory.ConfigurationInstanceFactory;
+import team.idealstate.minecraft.next.common.context.factory.ControllerInstanceFactory;
+import team.idealstate.minecraft.next.common.context.factory.SubscriberInstanceFactory;
 import team.idealstate.minecraft.next.common.context.lifecycle.Destroyable;
 import team.idealstate.minecraft.next.common.context.lifecycle.Initializable;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
@@ -84,6 +83,7 @@ import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.function.closure.Function;
 import team.idealstate.minecraft.next.common.io.InputUtils;
 import team.idealstate.minecraft.next.common.logging.Log;
+import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
@@ -141,6 +141,7 @@ final class SimpleContext implements Context {
             if (next) {
                 if (current + 1 > STATUS_DISABLED) {
                     this.status = STATUS_DESTROYED;
+                    this.environment = null;
                 } else {
                     this.status = current + 1;
                 }
@@ -154,6 +155,17 @@ final class SimpleContext implements Context {
                 lock.unlock();
             }
         }
+    }
+
+    private volatile String environment = null;
+
+    @NotNull @Override
+    public String getEnvironment() {
+        String environment = this.environment;
+        if (environment != null) {
+            return environment;
+        }
+        return (this.environment = System.getProperty(PROPERTY_ENVIRONMENT_KEY, ""));
     }
 
     @NotNull @Override
@@ -347,8 +359,11 @@ final class SimpleContext implements Context {
             @NotNull Class<M> metadataClass, InstanceFactory<M, ?> instanceFactory) {
         Validation.notNull(metadataClass, "metadataClass must not be null");
         Validation.is(
-                !NextLazy.class.isAssignableFrom(metadataClass),
-                "metadataClass must not be NextLazy");
+                !Laziness.class.isAssignableFrom(metadataClass),
+                "metadataClass must not be Laziness");
+        Validation.is(
+                !Environment.class.isAssignableFrom(metadataClass),
+                "metadataClass must not be Environment");
         Validation.notNull(instanceFactory, "instanceFactory must not be null");
         if (instanceFactory != null) {
             Class<M> factoryMetadataClass = instanceFactory.getMetadataClass();
@@ -363,21 +378,24 @@ final class SimpleContext implements Context {
 
     private final Map<Class<? extends Annotation>, Deque<Class<?>>> markedClasses =
             new ConcurrentHashMap<>();
-    private final Map<ComponentKey, SimpleComponent<?, ?>> components = new ConcurrentHashMap<>();
+    private final Map<ComponentKey, SimpleBean<?, ?>> components = new ConcurrentHashMap<>();
     private final Set<ComponentKey> inProgress = new CopyOnWriteArraySet<>();
 
     @Nullable @Override
-    public <M extends Annotation> Component<M, ?> componentBy(@NotNull Class<M> metadataClass) {
+    public <M extends Annotation>
+    Bean<M, ?> componentBy(
+                    @NotNull Class<M> metadataClass) {
         return componentBy(metadataClass, Object.class);
     }
 
     @Nullable @Override
     @SuppressWarnings({"unchecked", "DuplicatedCode"})
-    public <M extends Annotation, T> Component<M, T> componentBy(
-            @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
+    public <M extends Annotation, T>
+    Bean<M, T> componentBy(
+                    @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
         Validation.notNull(metadataClass, "metadataClass must not be null.");
         Validation.notNull(instanceClass, "instanceClass must not be null.");
-        return (Component<M, T>)
+        return (Bean<M, T>)
                 mustDependOn(
                         STATUS_ENABLED,
                         true,
@@ -409,8 +427,8 @@ final class SimpleContext implements Context {
                                 ComponentKey componentKey =
                                         new ComponentKey(
                                                 metadataClass, markedClass, instanceFactory);
-                                SimpleComponent<M, ?> component =
-                                        (SimpleComponent<M, ?>) components.get(componentKey);
+                                SimpleBean<M, ?> component =
+                                        (SimpleBean<M, ?>) components.get(componentKey);
                                 if (component != null) {
                                     if (activedClass.equals(instanceClass)
                                             || instanceClass.isInstance(component.getInstance())) {
@@ -422,12 +440,20 @@ final class SimpleContext implements Context {
                                 if (!instanceFactory.canBeCreated(it, metadata, markedClass)) {
                                     continue;
                                 }
+                                Environment componentEnv =
+                                        markedClass.getAnnotation(Environment.class);
+                                if (componentEnv != null) {
+                                    String env = componentEnv.value();
+                                    if (!StringUtils.isEmpty(env)
+                                            && !it.getEnvironment().equalsIgnoreCase(env)) {
+                                        continue;
+                                    }
+                                }
                                 if (!it.inProgress.add(componentKey)) {
                                     throw new IllegalStateException(
                                             "component is in progress. (circular)");
                                 }
-                                if (!NextLazy.class.isAssignableFrom(metadataClass)
-                                        && markedClass.getAnnotation(NextLazy.class) == null) {
+                                if (markedClass.getAnnotation(Laziness.class) == null) {
                                     T instance =
                                             (T)
                                                     doCreate(
@@ -435,11 +461,11 @@ final class SimpleContext implements Context {
                                                             instanceFactory,
                                                             metadata,
                                                             markedClass);
-                                    component = new SimpleComponent<>(metadata, instance);
+                                    component = new SimpleBean<>(metadata, instance);
                                 } else {
                                     InstanceFactory<M, ?> finalInstanceFactory = instanceFactory;
                                     component =
-                                            new SimpleComponent<>(
+                                            new SimpleBean<>(
                                                     metadata,
                                                     Lazy.of(
                                                             () ->
@@ -463,15 +489,17 @@ final class SimpleContext implements Context {
 
     @NotNull @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public <M extends Annotation> List<Component<M, ?>> componentsBy(
-            @NotNull Class<M> metadataClass) {
+    public <M extends Annotation>
+            List<Bean<M, ?>> componentsBy(
+                    @NotNull Class<M> metadataClass) {
         return (List) componentsBy(metadataClass, Object.class);
     }
 
     @NotNull @Override
     @SuppressWarnings({"unchecked", "rawtypes", "DuplicatedCode"})
-    public <M extends Annotation, T> List<Component<M, T>> componentsBy(
-            @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
+    public <M extends Annotation, T>
+            List<Bean<M, T>> componentsBy(
+                    @NotNull Class<M> metadataClass, @NotNull Class<T> instanceClass) {
         Validation.notNull(metadataClass, "metadataClass must not be null.");
         Validation.notNull(instanceClass, "instanceClass must not be null.");
         return mustDependOn(
@@ -498,36 +526,44 @@ final class SimpleContext implements Context {
                         }
                         activedClass = Object.class;
                     }
-                    List<Component<M, T>> components = new ArrayList<>(markedClasses.size());
+                    List<Bean<M, T>> beans =
+                            new ArrayList<>(markedClasses.size());
                     for (Class<?> markedClass : markedClasses) {
                         M metadata = markedClass.getAnnotation(metadataClass);
                         Validation.notNull(metadata, "metadata must not be null.");
                         assert metadata != null;
                         ComponentKey componentKey =
                                 new ComponentKey(metadataClass, markedClass, instanceFactory);
-                        SimpleComponent<M, ?> component =
-                                (SimpleComponent<M, ?>) it.components.get(componentKey);
+                        SimpleBean<M, ?> component =
+                                (SimpleBean<M, ?>) it.components.get(componentKey);
                         if (component != null) {
                             if (activedClass.equals(instanceClass)
                                     || instanceClass.isInstance(component.getInstance())) {
-                                components.add((SimpleComponent) component);
+                                beans.add((SimpleBean) component);
                             }
                             continue;
                         }
                         if (!instanceFactory.canBeCreated(it, metadata, markedClass)) {
                             continue;
                         }
+                        Environment componentEnv = markedClass.getAnnotation(Environment.class);
+                        if (componentEnv != null) {
+                            String env = componentEnv.value();
+                            if (!StringUtils.isEmpty(env)
+                                    && !it.getEnvironment().equalsIgnoreCase(env)) {
+                                continue;
+                            }
+                        }
                         if (!it.inProgress.add(componentKey)) {
                             throw new IllegalStateException("component is in progress. (circular)");
                         }
-                        if (!NextLazy.class.isAssignableFrom(metadataClass)
-                                && markedClass.getAnnotation(NextLazy.class) == null) {
+                        if (markedClass.getAnnotation(Laziness.class) == null) {
                             T instance = (T) doCreate(it, instanceFactory, metadata, markedClass);
-                            component = new SimpleComponent<>(metadata, instance);
+                            component = new SimpleBean<>(metadata, instance);
                         } else {
                             InstanceFactory<M, ?> finalInstanceFactory = instanceFactory;
                             component =
-                                    new SimpleComponent<>(
+                                    new SimpleBean<>(
                                             metadata,
                                             Lazy.of(
                                                     () ->
@@ -540,11 +576,11 @@ final class SimpleContext implements Context {
                         if (activedClass.equals(instanceClass)
                                 || instanceClass.isInstance(component.getInstance())) {
                             it.components.put(componentKey, component);
-                            components.add((SimpleComponent) component);
+                            beans.add((SimpleBean) component);
                         }
                         it.inProgress.remove(componentKey);
                     }
-                    return components;
+                    return beans;
                 });
     }
 
@@ -579,16 +615,17 @@ final class SimpleContext implements Context {
         return instance;
     }
 
-    private void doBeforeInitialize() {}
+    private void doBeforeInitialize() {
+        getEnvironment();
+    }
 
     private void doInitialize() {}
 
     private void doAfterInitialize() {
-        setInstanceFactory(NextComponent.class, new NextComponentInstanceFactory());
-        setInstanceFactory(NextConfiguration.class, new NextConfigurationYamlInstanceFactory());
-        setInstanceFactory(NextCommand.class, new NextCommandInstanceFactory());
-        setInstanceFactory(NextPlaceholder.class, new NextPlaceholderInstanceFactory());
-        setInstanceFactory(NextEventSubscriber.class, new NextEventSubscriberInstanceFactory());
+        setInstanceFactory(Component.class, new ComponentInstanceFactory());
+        setInstanceFactory(Configuration.class, new ConfigurationInstanceFactory());
+        setInstanceFactory(Controller.class, new ControllerInstanceFactory());
+        setInstanceFactory(Subscriber.class, new SubscriberInstanceFactory());
     }
 
     private void doBeforeLoad() {}
@@ -596,6 +633,7 @@ final class SimpleContext implements Context {
     private void doLoad() throws Throwable {
         Class<? extends ContextHolder> owner = contextHolder.getClass();
         Banner.lines(owner).forEach(Log::info);
+        Log.info(String.format("Environment: %s", getEnvironment()));
         Bundled.release(owner, getDataFolder());
         if (instanceFactories.isEmpty()) {
             return;
@@ -695,7 +733,7 @@ final class SimpleContext implements Context {
             return;
         }
         int count = 0;
-        for (SimpleComponent<?, ?> component : components.values()) {
+        for (SimpleBean<?, ?> component : components.values()) {
             try {
                 if (!component.isInitialized()) {
                     continue;

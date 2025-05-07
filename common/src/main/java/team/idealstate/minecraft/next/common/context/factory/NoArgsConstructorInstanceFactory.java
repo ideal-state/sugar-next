@@ -17,7 +17,6 @@
 package team.idealstate.minecraft.next.common.context.factory;
 
 import java.lang.annotation.Annotation;
-import team.idealstate.minecraft.next.common.context.AbstractInstanceFactory;
 import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.logging.Log;

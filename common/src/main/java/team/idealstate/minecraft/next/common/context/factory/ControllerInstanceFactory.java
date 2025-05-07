@@ -16,28 +16,30 @@
 
 package team.idealstate.minecraft.next.common.context.factory;
 
-import java.lang.annotation.Annotation;
 import team.idealstate.minecraft.next.common.command.CommandLine;
 import team.idealstate.minecraft.next.common.context.Context;
+import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public abstract class CommandInstanceFactory<M extends Annotation>
-        extends NoArgsConstructorInstanceFactory<M, Object> {
-    protected CommandInstanceFactory(@NotNull Class<M> metadataClass) {
-        super(metadataClass, Object.class);
+public final class ControllerInstanceFactory
+        extends NoArgsConstructorInstanceFactory<Controller, Object> {
+    public ControllerInstanceFactory() {
+        super(Controller.class, Object.class);
     }
-
-    @NotNull protected abstract String getCommandName(@NotNull M metadata);
 
     @Override
     protected boolean doCanBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
-        String name = getCommandName(metadata);
+            @NotNull Context context, @NotNull Controller metadata, @NotNull Class<?> marked) {
+        String name = metadata.value();
         try {
             CommandLine.validateName(name);
         } catch (IllegalArgumentException e) {
-            Log.warn(() -> getMetadataClass().getSimpleName() + ": Invalid command name: " + name);
+            Log.warn(
+                    () ->
+                            getMetadataClass().getSimpleName()
+                                    + ": Invalid controller name: "
+                                    + name);
             return false;
         }
         return super.doCanBeCreated(context, metadata, marked);

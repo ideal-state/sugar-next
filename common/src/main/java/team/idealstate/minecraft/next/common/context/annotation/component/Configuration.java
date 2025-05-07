@@ -21,16 +21,21 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.command.CommandLine;
+import team.idealstate.minecraft.next.common.context.Context;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextCommand {
+public @interface Configuration {
 
     /**
-     * @return 命令的主要名称（标识符），为 "" 时则使用类名
-     * @see CommandLine#validateName(String)
+     * @return 配置的主要名称（标识符），为 "" 时则使用类名
      */
     String value() default "";
+
+    /**
+     * @return 配置文件的 {@link java.net.URI}
+     * @see Context#getResource(String)
+     */
+    String resource();
 }

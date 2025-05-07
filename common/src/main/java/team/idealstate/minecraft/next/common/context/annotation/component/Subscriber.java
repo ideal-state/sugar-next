@@ -27,10 +27,15 @@ import team.idealstate.minecraft.next.common.eventbus.Event;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface NextEventSubscriber {
+public @interface Subscriber {
+
+    /**
+     * @return 订阅器的主要名称（标识符），为 "" 时则使用类名
+     */
+    String value() default "";
 
     /**
      * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link InstanceFactory} 来决定
      */
-    Class<? extends Event> value() default Event.class;
+    Class<? extends Event> event() default Event.class;
 }

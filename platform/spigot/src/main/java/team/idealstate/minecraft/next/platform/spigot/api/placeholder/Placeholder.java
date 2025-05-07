@@ -14,13 +14,6 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.factory;
+package team.idealstate.minecraft.next.platform.spigot.api.placeholder;
 
-import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
-
-public final class NextEventSubscriberInstanceFactory
-        extends NoArgsConstructorInstanceFactory<NextEventSubscriber, Object> {
-    public NextEventSubscriberInstanceFactory() {
-        super(NextEventSubscriber.class, Object.class);
-    }
-}
+public interface Placeholder {}

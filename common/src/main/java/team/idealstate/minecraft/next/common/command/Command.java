@@ -14,23 +14,6 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation.component;
+package team.idealstate.minecraft.next.common.command;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.context.Context;
-
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-public @interface NextConfiguration {
-
-    /**
-     * @return 配置文件的 {@link java.net.URI}
-     * @see Context#getResource(String)
-     */
-    String value();
-}
+public interface Command {}

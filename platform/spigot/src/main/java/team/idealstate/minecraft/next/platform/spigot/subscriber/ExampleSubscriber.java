@@ -14,16 +14,18 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.platform.spigot.example;
+package team.idealstate.minecraft.next.platform.spigot.subscriber;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.ServerCommandEvent;
-import team.idealstate.minecraft.next.common.context.annotation.component.NextEventSubscriber;
+import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.logging.Log;
 
-@NextEventSubscriber
-public final class ExampleNextSpigotListener implements Listener {
+@Subscriber
+@Environment("DEBUG")
+public final class ExampleSubscriber implements Listener {
 
     @EventHandler
     public void onCommand(ServerCommandEvent event) {

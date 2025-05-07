@@ -14,12 +14,14 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context;
+package team.idealstate.minecraft.next.common.context.factory;
 
 import java.lang.annotation.Annotation;
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import team.idealstate.minecraft.next.common.context.Context;
+import team.idealstate.minecraft.next.common.context.InstanceFactory;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
