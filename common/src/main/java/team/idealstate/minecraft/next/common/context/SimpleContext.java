@@ -23,6 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -63,6 +67,8 @@ import team.idealstate.minecraft.next.common.context.annotation.component.Compon
 import team.idealstate.minecraft.next.common.context.annotation.component.Configuration;
 import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
 import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Autowire;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Autowired;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Laziness;
 import team.idealstate.minecraft.next.common.context.aware.Aware;
@@ -591,10 +597,96 @@ final class SimpleContext implements Context {
                 ((EventBusAware) instance).setEventBus(eventBus);
             }
         }
+        Class<?> instanceType = instance.getClass();
+        Method[] methods = instanceType.getMethods();
+        if (methods.length != 0) {
+            doAutowire(instance, instanceType, methods);
+        }
         if (instance instanceof Initializable) {
             ((Initializable) instance).initialize();
         }
         return instance;
+    }
+
+    private void doAutowire(Object instance, Class<?> instanceType, Method[] methods) {
+        for (Method method : methods) {
+            if (method.getAnnotation(Autowired.class) == null) {
+                continue;
+            }
+            String methodName = method.getName();
+            String instanceTypeName = instanceType.getName();
+            if (Modifier.isStatic(method.getModifiers())) {
+                Log.warn(
+                        String.format(
+                                "Autowire: '%s' static method '%s' is ignored.",
+                                instanceTypeName, methodName));
+                continue;
+            }
+            Parameter[] parameters = method.getParameters();
+            Object[] parameterValues = new Object[parameters.length];
+            for (int i = 0; i < parameters.length; i++) {
+                Parameter parameter = parameters[i];
+                Autowire autowire = parameter.getAnnotation(Autowire.class);
+                String parameterName = parameter.getName();
+                if (autowire == null) {
+                    throw new IllegalStateException(
+                            String.format(
+                                    "Autowire: '%s' method '%s' parameter '%s' must be annotated"
+                                            + " with @Autowire.",
+                                    instanceTypeName, methodName, parameterName));
+                }
+                Class<?> autowireInstanceType = autowire.instanceType();
+                Class<?> parameterType = parameter.getType();
+                String autowireInstanceTypeName = autowireInstanceType.getName();
+                Class<? extends Annotation> metadataType = autowire.metadataType();
+                Object value;
+                boolean required = autowire.required();
+                if (autowire.multiple()) {
+                    Validation.is(
+                            List.class.isAssignableFrom(parameterType),
+                            String.format(
+                                    "Autowire: '%s' method '%s' parameter '%s' must be assignable"
+                                            + " to List<? super %s>.",
+                                    instanceTypeName,
+                                    methodName,
+                                    parameterName,
+                                    autowireInstanceTypeName));
+                    value = getBeans(metadataType, autowireInstanceType);
+                    if (required && ((List<?>) value).isEmpty()) {
+                        throw new IllegalStateException(
+                                String.format(
+                                        "Autowire: '%s' method '%s' parameter '%s' must not be"
+                                                + " empty.",
+                                        instanceTypeName, methodName, parameterName));
+                    }
+                } else {
+                    Validation.is(
+                            parameterType.isAssignableFrom(autowireInstanceType),
+                            String.format(
+                                    "Autowire: '%s' method '%s' parameter '%s' must be assignable"
+                                            + " from %s.",
+                                    instanceTypeName,
+                                    methodName,
+                                    parameterName,
+                                    autowireInstanceTypeName));
+                    value = getBean(metadataType, autowireInstanceType);
+                    if (required && value == null) {
+                        throw new IllegalStateException(
+                                String.format(
+                                        "Autowire: '%s' method '%s' parameter '%s' must not be"
+                                                + " null.",
+                                        instanceTypeName, methodName, parameterName));
+                    }
+                }
+                parameterValues[i] = value;
+            }
+            method.setAccessible(true);
+            try {
+                method.invoke(instance, parameterValues);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new ContextException(e);
+            }
+        }
     }
 
     private void doBeforeInitialize() {
