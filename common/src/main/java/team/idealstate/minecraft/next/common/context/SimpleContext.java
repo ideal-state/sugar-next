@@ -16,45 +16,17 @@
 
 package team.idealstate.minecraft.next.common.context;
 
-import static team.idealstate.minecraft.next.common.function.Functional.functional;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.objectweb.asm.ClassReader;
 import team.idealstate.minecraft.next.common.banner.Banner;
 import team.idealstate.minecraft.next.common.bundled.Bundled;
@@ -71,12 +43,14 @@ import team.idealstate.minecraft.next.common.context.annotation.feature.Autowire
 import team.idealstate.minecraft.next.common.context.annotation.feature.Autowired;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Laziness;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Transaction;
 import team.idealstate.minecraft.next.common.context.aware.Aware;
 import team.idealstate.minecraft.next.common.context.aware.ContextAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.context.aware.EventBusAware;
 import team.idealstate.minecraft.next.common.context.aware.MarkedAware;
 import team.idealstate.minecraft.next.common.context.aware.MetadataAware;
+import team.idealstate.minecraft.next.common.context.aware.SelfAware;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.context.factory.ComponentBeanFactory;
 import team.idealstate.minecraft.next.common.context.factory.ConfigurationBeanFactory;
@@ -84,6 +58,7 @@ import team.idealstate.minecraft.next.common.context.factory.ControllerBeanFacto
 import team.idealstate.minecraft.next.common.context.factory.SubscriberBeanFactory;
 import team.idealstate.minecraft.next.common.context.lifecycle.Destroyable;
 import team.idealstate.minecraft.next.common.context.lifecycle.Initializable;
+import team.idealstate.minecraft.next.common.database.DatabaseSessionFactory;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.function.closure.Function;
@@ -93,6 +68,45 @@ import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+
+import static team.idealstate.minecraft.next.common.function.Functional.functional;
 
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 final class SimpleContext implements Context {
@@ -106,6 +120,7 @@ final class SimpleContext implements Context {
     @NonNull private final ContextHolder contextHolder;
     @NonNull private final ContextLifecycle contextLifecycle;
     @NonNull private final EventBus eventBus;
+    private final DatabaseSessionFactory databaseSessionFactory;
     private volatile int status = STATUS_DESTROYED;
     private final Lock lock = new ReentrantLock();
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
@@ -174,6 +189,12 @@ final class SimpleContext implements Context {
         return (this.environment = System.getProperty(PROPERTY_ENVIRONMENT_KEY, ""));
     }
 
+    @NotNull
+    @Override
+    public ClassLoader getClassLoader() {
+        return contextHolder.getClass().getClassLoader();
+    }
+
     @NotNull @Override
     public String getName() {
         return Validation.requireNotNullOrBlank(
@@ -236,6 +257,12 @@ final class SimpleContext implements Context {
             return Files.newInputStream(file.toPath());
         }
         return null;
+    }
+
+    @Nullable
+    @Override
+    public DatabaseSessionFactory getDatabaseSessionFactory() {
+        return databaseSessionFactory;
     }
 
     @Override
@@ -599,13 +626,20 @@ final class SimpleContext implements Context {
         }
         Class<?> instanceType = instance.getClass();
         Method[] methods = instanceType.getMethods();
+        T proxy;
         if (methods.length != 0) {
             doAutowire(instance, instanceType, methods);
+            proxy = maybeProxy(instance, instanceType, methods);
+        } else {
+            proxy = instance;
         }
-        if (instance instanceof Initializable) {
-            ((Initializable) instance).initialize();
+        if (instance instanceof SelfAware) {
+            ((SelfAware) instance).setSelf(proxy);
         }
-        return instance;
+        if (proxy instanceof Initializable) {
+            ((Initializable) proxy).initialize();
+        }
+        return proxy;
     }
 
     private void doAutowire(Object instance, Class<?> instanceType, Method[] methods) {
@@ -686,6 +720,40 @@ final class SimpleContext implements Context {
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new ContextException(e);
             }
+        }
+    }
+
+    @NotNull
+    @SuppressWarnings({"unchecked"})
+    private <T> T maybeProxy(T instance, Class<?> instanceType, Method[] methods) {
+        Map<String, Transaction> transactions = new HashMap<>(methods.length);
+        for (Method method : methods) {
+            Transaction transaction = method.getAnnotation(Transaction.class);
+            if (transaction == null) {
+                continue;
+            }
+            if (Modifier.isStatic(method.getModifiers())) {
+                Log.warn(String.format(
+                        "Transaction: '%s' static method '%s' is ignored.",
+                        instanceType.getName(), method.getName()
+                ));
+                continue;
+            }
+            transactions.put(method.toString(), transaction);
+        }
+        if (transactions.isEmpty()) {
+            return instance;
+        }
+        transactions = Collections.unmodifiableMap(transactions);
+        Class<?> proxyType = functional(new ByteBuddy().subclass(instanceType)
+                .method(ElementMatchers.any().and(ElementMatchers.not(ElementMatchers.isStatic())))
+                .intercept(MethodDelegation.to(new TransactionInterceptor(this, instance, transactions)))
+                .make())
+                .use(Class.class, unloaded -> unloaded.load(getClassLoader()).getLoaded());
+        try {
+            return (T) proxyType.getConstructor().newInstance();
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw new ContextException(e);
         }
     }
 
@@ -851,6 +919,38 @@ final class SimpleContext implements Context {
         public int hashCode() {
             return Objects.hash(
                     getMetadataType(), getMarked(), System.identityHashCode(getBeanFactory()));
+        }
+    }
+
+    @RequiredArgsConstructor
+    private static final class TransactionInterceptor {
+        @NonNull
+        private final Context context;
+        @NonNull
+        private final Object instance;
+        @NonNull
+        private final Map<String, Transaction> transactions;
+
+        @RuntimeType
+        public Object intercept(@Origin String method, @Origin MethodHandle methodHandle, @AllArguments Object[] arguments) throws Throwable {
+            Transaction transaction = transactions.get(method);
+            MethodHandle bound = methodHandle.bindTo(instance);
+            if (transaction == null) {
+                return bound.invokeWithArguments(arguments);
+            }
+            DatabaseSessionFactory databaseSessionFactory = context.getDatabaseSessionFactory();
+            if (databaseSessionFactory == null) {
+                throw new IllegalStateException("database session factory is not set.");
+            }
+            return functional(databaseSessionFactory.openSession(transaction.executionMode(), transaction.isolationLevel()))
+                    .use(Object.class, session -> {
+                        try {
+                            return bound.invokeWithArguments(arguments);
+                        } catch (Throwable e) {
+                            session.rollback();
+                            throw e;
+                        }
+                    });
         }
     }
 }
