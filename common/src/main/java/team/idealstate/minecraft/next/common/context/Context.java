@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.util.List;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
+import team.idealstate.minecraft.next.common.database.DatabaseSessionFactory;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
@@ -47,6 +48,8 @@ public interface Context {
      */
     @NotNull String getEnvironment();
 
+    @NotNull ClassLoader getClassLoader();
+
     @NotNull String getName();
 
     @NotNull String getVersion();
@@ -54,6 +57,9 @@ public interface Context {
     @NotNull File getDataFolder();
 
     @Nullable InputStream getResource(@NotNull String path) throws IOException;
+
+    @Nullable
+    DatabaseSessionFactory getDatabaseSessionFactory();
 
     boolean isActive();
 
