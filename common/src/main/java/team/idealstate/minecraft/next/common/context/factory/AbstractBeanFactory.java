@@ -20,14 +20,13 @@ import java.lang.annotation.Annotation;
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.context.BeanFactory;
+import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class AbstractBeanFactory<M extends Annotation, T>
-        implements BeanFactory<M, T> {
+public abstract class AbstractBeanFactory<M extends Annotation, T> implements BeanFactory<M, T> {
 
     @NonNull private final Class<M> metadataType;
     @NonNull private final Class<T> instanceType;
@@ -54,7 +53,9 @@ public abstract class AbstractBeanFactory<M extends Annotation, T>
         Class<M> metadataType = getMetadataType();
         Validation.is(
                 metadataType.isInstance(metadata),
-                String.format("metadata '%s' must be an instance of metadataType '%s'.", metadata, metadataType));
+                String.format(
+                        "metadata '%s' must be an instance of metadataType '%s'.",
+                        metadata, metadataType));
         return doCanBeCreated(context, metadata, marked);
     }
 
@@ -68,7 +69,9 @@ public abstract class AbstractBeanFactory<M extends Annotation, T>
         Class<T> instanceType = getInstanceType();
         Validation.is(
                 instanceType.isInstance(instance),
-                String.format("instance '%s' must be an instance of instanceType '%s'.", instance, instanceType));
+                String.format(
+                        "instance '%s' must be an instance of instanceType '%s'.",
+                        instance, instanceType));
         return instance;
     }
 }

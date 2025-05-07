@@ -19,7 +19,6 @@ package team.idealstate.minecraft.next.platform.spigot.controller;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import team.idealstate.minecraft.next.common.banner.Banner;
@@ -35,7 +34,6 @@ import team.idealstate.minecraft.next.common.context.annotation.component.Contro
 import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.logging.Log;
-import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 
@@ -57,16 +55,18 @@ public final class ExampleController implements ContextHolderAware, Command, Pla
 
     @CommandHandler("show {target} {message}")
     public CommandResult show(
-            @CommandArgument(value = "target", completer = "completePlayer", converter = "convertToPlayer") Player player,
-            @CommandArgument(completer = "completeMessage") String message
-    ) {
+            @CommandArgument(
+                            value = "target",
+                            completer = "completePlayer",
+                            converter = "convertToPlayer")
+                    Player player,
+            @CommandArgument(completer = "completeMessage") String message) {
         Log.info(String.format("show(Player, String): %s, %s", player, message));
         player.sendMessage(message);
         return CommandResult.success();
     }
 
-    @NotNull
-    public List<String> completePlayer(@NotNull CommandContext context, @NotNull String argument) {
+    @NotNull public List<String> completePlayer(@NotNull CommandContext context, @NotNull String argument) {
         String lowerCase = argument.toLowerCase();
         return Bukkit.getOnlinePlayers().stream()
                 .map(Player::getName)
@@ -75,20 +75,21 @@ public final class ExampleController implements ContextHolderAware, Command, Pla
                 .collect(Collectors.toList());
     }
 
-    @NotNull
-    public List<String> completeMessage(@NotNull CommandContext context, @NotNull String argument) {
+    @NotNull public List<String> completeMessage(@NotNull CommandContext context, @NotNull String argument) {
         return Arrays.asList("minecraft-next", "hello-next");
     }
 
-    @NotNull
-    public ConverterResult<Player> convertToPlayer(@NotNull CommandContext context, @NotNull String argument, boolean onConversion) throws CommandArgumentConversionException {
+    @NotNull public ConverterResult<Player> convertToPlayer(
+            @NotNull CommandContext context, @NotNull String argument, boolean onConversion)
+            throws CommandArgumentConversionException {
         Player player = Bukkit.getPlayer(argument);
         boolean canBeConvert = player != null && player.isOnline();
         if (!onConversion) {
             return canBeConvert ? ConverterResult.success() : ConverterResult.failure();
         }
         if (!canBeConvert) {
-            throw new CommandArgumentConversionException(String.format("The argument '%s' cannot be convert to player.", argument));
+            throw new CommandArgumentConversionException(
+                    String.format("The argument '%s' cannot be convert to player.", argument));
         }
         return ConverterResult.success(player);
     }

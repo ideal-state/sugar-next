@@ -89,8 +89,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     }
 
     private void registerCommands() {
-        List<Bean<Controller, Command>> beans =
-                context.getBeans(Controller.class, Command.class);
+        List<Bean<Controller, Command>> beans = context.getBeans(Controller.class, Command.class);
         if (beans.isEmpty()) {
             return;
         }
@@ -138,8 +137,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     }
 
     private void registerEventListeners(PluginManager pluginManager) {
-        List<Bean<Subscriber, Listener>> beans =
-                context.getBeans(Subscriber.class, Listener.class);
+        List<Bean<Subscriber, Listener>> beans = context.getBeans(Subscriber.class, Listener.class);
         if (beans.isEmpty()) {
             return;
         }

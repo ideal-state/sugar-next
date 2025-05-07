@@ -40,7 +40,6 @@ import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
 import team.idealstate.minecraft.next.common.function.data.Pair;
-import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
@@ -54,15 +53,13 @@ final class SimpleCommandLine implements CommandLine {
     @NonNull private final String name;
     @NonNull private final List<String> permission;
     private final boolean open;
-    @NonNull
-    private final Class<?> argumentType;
+    @NonNull private final Class<?> argumentType;
     private final CommandArgument.Converter<?> converter;
     private final CommandArgument.Completer completer;
     private final Deque<SimpleCommandLine> children = new ArrayDeque<>();
     private CommandExecutor executor;
 
-    @NotNull
-    @SuppressWarnings({"unchecked", "rawtypes", "ExtractMethodRecommender"})
+    @NotNull @SuppressWarnings({"unchecked", "rawtypes", "ExtractMethodRecommender"})
     public static SimpleCommandLine of(@NotNull String name, @NotNull Object command) {
         CommandLine.validateName(name);
         Validation.notNull(command, "command must not be null.");
@@ -89,7 +86,13 @@ final class SimpleCommandLine implements CommandLine {
                 };
         SimpleCommandLine root =
                 new SimpleCommandLine(
-                        ROOT_DEPTH, name, Collections.singletonList(name), true, String.class, null, completer);
+                        ROOT_DEPTH,
+                        name,
+                        Collections.singletonList(name),
+                        true,
+                        String.class,
+                        null,
+                        completer);
         lazyRoot.set(root);
         Class<?> commandType = command.getClass();
         Method[] methods = commandType.getMethods();
@@ -136,7 +139,8 @@ final class SimpleCommandLine implements CommandLine {
                 permission = arguments;
             }
             Parameter[] parameters = method.getParameters();
-            Map<String, Pair<Parameter, CommandArgument>> commandArguments = new HashMap<>(parameters.length);
+            Map<String, Pair<Parameter, CommandArgument>> commandArguments =
+                    new HashMap<>(parameters.length);
             for (Parameter parameter : parameters) {
                 CommandArgument commandArgument =
                         parameter.getDeclaredAnnotation(CommandArgument.class);
@@ -198,17 +202,21 @@ final class SimpleCommandLine implements CommandLine {
                                         commandType.getMethod(
                                                 converterMethodName,
                                                 CommandContext.class,
-                                                String.class, boolean.class);
+                                                String.class,
+                                                boolean.class);
                                 if (Modifier.isStatic(converterMethod.getModifiers())) {
                                     throw new IllegalArgumentException(
                                             String.format(
-                                                    "%s(...): converter method '%s' must not be static.",
+                                                    "%s(...): converter method '%s' must not be"
+                                                            + " static.",
                                                     methodName, converterMethodName));
                                 }
-                                if (!CommandArgument.ConverterResult.class.isAssignableFrom(converterMethod.getReturnType())) {
+                                if (!CommandArgument.ConverterResult.class.isAssignableFrom(
+                                        converterMethod.getReturnType())) {
                                     throw new IllegalArgumentException(
                                             String.format(
-                                                    "%s(...): converter method '%s' return type must be assignable to ConverterResult.",
+                                                    "%s(...): converter method '%s' return type"
+                                                        + " must be assignable to ConverterResult.",
                                                     methodName, converterMethodName));
                                 }
                                 converterMethod.setAccessible(true);
@@ -217,18 +225,27 @@ final class SimpleCommandLine implements CommandLine {
                                                 parameterType, command, converterMethod);
                             }
                             if (converter == null) {
-                                converter = new CommandArgument.AbstractConverter<String>(String.class) {
-                                    @NotNull
-                                    @Override
-                                    protected CommandArgument.ConverterResult<String> doConvert(@NotNull CommandContext context, @NotNull String argument) throws CommandArgumentConversionException {
-                                        return CommandArgument.ConverterResult.success(argument);
-                                    }
+                                converter =
+                                        new CommandArgument.AbstractConverter<String>(
+                                                String.class) {
+                                            @NotNull @Override
+                                            protected CommandArgument.ConverterResult<String>
+                                                    doConvert(
+                                                            @NotNull CommandContext context,
+                                                            @NotNull String argument)
+                                                            throws
+                                                                    CommandArgumentConversionException {
+                                                return CommandArgument.ConverterResult.success(
+                                                        argument);
+                                            }
 
-                                    @Override
-                                    protected boolean canBeConvert(@NotNull CommandContext context, @NotNull String argument) {
-                                        return true;
-                                    }
-                                };
+                                            @Override
+                                            protected boolean canBeConvert(
+                                                    @NotNull CommandContext context,
+                                                    @NotNull String argument) {
+                                                return true;
+                                            }
+                                        };
                             }
                         }
                         Class<? extends CommandArgument.Completer> completerClass =
@@ -248,13 +265,15 @@ final class SimpleCommandLine implements CommandLine {
                                 if (Modifier.isStatic(completerMethod.getModifiers())) {
                                     throw new IllegalArgumentException(
                                             String.format(
-                                                    "%s(...): completer method '%s' must not be static.",
+                                                    "%s(...): completer method '%s' must not be"
+                                                            + " static.",
                                                     methodName, completerMethodName));
                                 }
                                 if (!List.class.isAssignableFrom(completerMethod.getReturnType())) {
                                     throw new IllegalArgumentException(
                                             String.format(
-                                                    "%s(...): completer method '%s' return type must be assignable to List.",
+                                                    "%s(...): completer method '%s' return type"
+                                                            + " must be assignable to List.",
                                                     methodName, completerMethodName));
                                 }
                                 completerMethod.setAccessible(true);
@@ -271,7 +290,8 @@ final class SimpleCommandLine implements CommandLine {
                     if (parameterType == null) {
                         throw new IllegalArgumentException(
                                 String.format(
-                                        "%s(...): variable parameter '%s' must have a type.", methodName, childName));
+                                        "%s(...): variable parameter '%s' must have a type.",
+                                        methodName, childName));
                     }
                 } else {
                     List<String> list = Collections.singletonList(childName);
@@ -279,8 +299,8 @@ final class SimpleCommandLine implements CommandLine {
                             (context, argument) -> {
                                 if (argument.isEmpty()
                                         || childName
-                                        .toLowerCase()
-                                        .startsWith(argument.toLowerCase())) {
+                                                .toLowerCase()
+                                                .startsWith(argument.toLowerCase())) {
                                     return list;
                                 }
                                 return Collections.emptyList();
@@ -396,16 +416,15 @@ final class SimpleCommandLine implements CommandLine {
         Validation.notNull(permission, "permission must not be null.");
         Validation.notNull(argumentType, "argumentType must not be null.");
         SimpleCommandLine child =
-                new SimpleCommandLine(depth + 1, name, permission, open, argumentType, converter, completer);
+                new SimpleCommandLine(
+                        depth + 1, name, permission, open, argumentType, converter, completer);
         children.add(child);
         return child;
     }
 
     private CommandArgument.Completer getCompleter(@NotNull CommandContext context) {
         CommandArgument.Completer completer = this.completer;
-        return completer == null
-                ? context.getCompleter(argumentType)
-                : completer;
+        return completer == null ? context.getCompleter(argumentType) : completer;
     }
 
     @SuppressWarnings({"unchecked"})
@@ -464,7 +483,8 @@ final class SimpleCommandLine implements CommandLine {
                 continue;
             }
             String argument1 = arguments[acceptedChild.depth];
-            CommandArgument.ConverterResult<?> converted = converter.convert(context, argument1, true);
+            CommandArgument.ConverterResult<?> converted =
+                    converter.convert(context, argument1, true);
             if (!converted.isSuccess()) {
                 throw new CommandException(String.format("Invalid argument: %s", argument1));
             }

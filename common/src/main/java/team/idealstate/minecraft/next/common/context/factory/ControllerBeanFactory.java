@@ -22,8 +22,7 @@ import team.idealstate.minecraft.next.common.context.annotation.component.Contro
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class ControllerBeanFactory
-        extends NoArgsConstructorBeanFactory<Controller, Object> {
+public final class ControllerBeanFactory extends NoArgsConstructorBeanFactory<Controller, Object> {
     public ControllerBeanFactory() {
         super(Controller.class, Object.class);
     }
@@ -35,7 +34,10 @@ public final class ControllerBeanFactory
         try {
             CommandLine.validateName(name);
         } catch (IllegalArgumentException e) {
-            Log.warn(String.format("%s: Invalid controller name '%s'. (%s)", getMetadataType().getSimpleName(), name, e.getMessage()));
+            Log.warn(
+                    String.format(
+                            "%s: Invalid controller name '%s'. (%s)",
+                            getMetadataType().getSimpleName(), name, e.getMessage()));
             return false;
         }
         return super.doCanBeCreated(context, metadata, marked);

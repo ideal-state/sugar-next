@@ -33,13 +33,21 @@ public abstract class NoArgsConstructorBeanFactory<M extends Annotation, T>
     protected boolean doCanBeCreated(
             @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
         if (!getInstanceType().isAssignableFrom(marked)) {
-            Log.warn(String.format("%s: %s is not assignable to %s.", getMetadataType().getSimpleName(), marked.getName(), getInstanceType().getName()));
+            Log.warn(
+                    String.format(
+                            "%s: %s is not assignable to %s.",
+                            getMetadataType().getSimpleName(),
+                            marked.getName(),
+                            getInstanceType().getName()));
             return false;
         }
         try {
             marked.getConstructor();
         } catch (NoSuchMethodException e) {
-            Log.warn(String.format("%s: %s has no default constructor.", getMetadataType().getSimpleName(), marked.getName()));
+            Log.warn(
+                    String.format(
+                            "%s: %s has no default constructor.",
+                            getMetadataType().getSimpleName(), marked.getName()));
             return false;
         }
         return true;

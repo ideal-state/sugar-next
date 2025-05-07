@@ -22,7 +22,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.List;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NonNull;
@@ -51,13 +50,12 @@ public @interface CommandArgument {
 
     /**
      * 此项优先级低于 {@link #converterType()}
-
-    /**
-     * 此项优先级低于 {@link #converterType()}
+     *
+     * <p>/** 此项优先级低于 {@link #converterType()}
      *
      * @return 指定的命令参数转换器方法名称（自定义转换器方法应为公共的成员方法， 其签名结构应为 {@link
-     *     ExampleCommand#convertToInt(CommandContext, String, boolean)}）， 值为 "" 时将使用 {@link #converterType()}
-     *     或是在上下文中根据参数类型获取到的转换器 {@link CommandContext#getConverter(Class)}
+     *     ExampleCommand#convertToInt(CommandContext, String, boolean)}）， 值为 "" 时将使用 {@link
+     *     #converterType()} 或是在上下文中根据参数类型获取到的转换器 {@link CommandContext#getConverter(Class)}
      */
     String converter() default "";
 
@@ -71,14 +69,14 @@ public @interface CommandArgument {
     String completer() default "";
 
     /**
-     * @return 指定的命令参数转换器类（自定义转换器应提供一个公共的无参构造方法）， 值为 {@link Converter} 时将使用 {@link
-     *     #converter()} ()} 或是在上下文中根据参数类型获取到的转换器 {@link CommandContext#getConverter(Class)}
+     * @return 指定的命令参数转换器类（自定义转换器应提供一个公共的无参构造方法）， 值为 {@link Converter} 时将使用 {@link #converter()} ()}
+     *     或是在上下文中根据参数类型获取到的转换器 {@link CommandContext#getConverter(Class)}
      */
     Class<? extends Converter> converterType() default Converter.class;
 
     /**
-     * @return 指定的命令参数补全器类（自定义补全器应提供一个公共的无参构造方法）， 值为 {@link Completer} 时将使用 {@link
-     *     #completer()} 或是在上下文中根据参数类型获取到的补全器 {@link CommandContext#getCompleter(Class)}
+     * @return 指定的命令参数补全器类（自定义补全器应提供一个公共的无参构造方法）， 值为 {@link Completer} 时将使用 {@link #completer()}
+     *     或是在上下文中根据参数类型获取到的补全器 {@link CommandContext#getCompleter(Class)}
      */
     Class<? extends Completer> completerType() default Completer.class;
 
@@ -114,36 +112,41 @@ public @interface CommandArgument {
          * @return 参数转换后的对象，可能为 null
          * @throws CommandArgumentConversionException 当转换失败时应抛出此异常而不是返回 null
          */
-        @NotNull ConverterResult<T> convert(@NotNull CommandContext context, @NotNull String argument, boolean onConversion)
+        @NotNull ConverterResult<T> convert(
+                @NotNull CommandContext context, @NotNull String argument, boolean onConversion)
                 throws CommandArgumentConversionException;
     }
 
     @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
     abstract class AbstractConverter<T> implements Converter<T> {
-        @NonNull
-        private final Class<T> targetType;
+        @NonNull private final Class<T> targetType;
+
         @Override
         @NotNull public final Class<T> getTargetType() {
             return targetType;
         }
 
-        @NotNull protected abstract ConverterResult<T> doConvert(@NotNull CommandContext context, @NotNull String argument)
+        @NotNull protected abstract ConverterResult<T> doConvert(
+                @NotNull CommandContext context, @NotNull String argument)
                 throws CommandArgumentConversionException;
 
-        protected abstract boolean canBeConvert(@NotNull CommandContext context, @NotNull String argument);
+        protected abstract boolean canBeConvert(
+                @NotNull CommandContext context, @NotNull String argument);
 
-        @NotNull
-        @Override
-        public final ConverterResult<T> convert(@NotNull CommandContext context, @NotNull String argument, boolean onConversion) throws CommandArgumentConversionException {
+        @NotNull @Override
+        public final ConverterResult<T> convert(
+                @NotNull CommandContext context, @NotNull String argument, boolean onConversion)
+                throws CommandArgumentConversionException {
             Validation.notNull(context, "context must not be null.");
             Validation.notNull(argument, "argument must not be null.");
             boolean canBeConvert = canBeConvert(context, argument);
             if (!onConversion) {
                 return canBeConvert ? ConverterResult.success() : ConverterResult.failure();
             } else if (!canBeConvert) {
-                throw new CommandArgumentConversionException(String.format(
-                        "The argument '%s' cannot be convert to the targetType '%s'.", argument, getTargetType()
-                ));
+                throw new CommandArgumentConversionException(
+                        String.format(
+                                "The argument '%s' cannot be convert to the targetType '%s'.",
+                                argument, getTargetType()));
             }
             ConverterResult<T> result = doConvert(context, argument);
             if (!result.isSuccess()) {

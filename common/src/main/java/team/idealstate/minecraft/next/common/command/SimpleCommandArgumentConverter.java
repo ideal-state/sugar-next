@@ -16,6 +16,8 @@
 
 package team.idealstate.minecraft.next.common.command;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument.ConverterResult;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
@@ -23,15 +25,13 @@ import team.idealstate.minecraft.next.common.command.exception.CommandException;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
 final class SimpleCommandArgumentConverter<T> extends CommandArgument.AbstractConverter<T> {
 
     private final Object command;
     private final Method method;
 
-    SimpleCommandArgumentConverter(@NotNull Class<T> targetType, @NotNull Object command, @NotNull Method method) {
+    SimpleCommandArgumentConverter(
+            @NotNull Class<T> targetType, @NotNull Object command, @NotNull Method method) {
         super(targetType);
         Validation.notNull(command, "command cannot be null.");
         Validation.notNull(method, "method cannot be null.");
@@ -41,10 +41,12 @@ final class SimpleCommandArgumentConverter<T> extends CommandArgument.AbstractCo
 
     @Override
     @SuppressWarnings({"unchecked"})
-    protected @NotNull ConverterResult<T> doConvert(@NotNull CommandContext context, @NotNull String argument)
+    protected @NotNull ConverterResult<T> doConvert(
+            @NotNull CommandContext context, @NotNull String argument)
             throws CommandArgumentConversionException {
         try {
-            ConverterResult<T> result = (ConverterResult<T>) method.invoke(command, context, argument, true);
+            ConverterResult<T> result =
+                    (ConverterResult<T>) method.invoke(command, context, argument, true);
             return Validation.requireNotNull(result, "converter result cannot be null.");
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new CommandException(e);
@@ -55,8 +57,10 @@ final class SimpleCommandArgumentConverter<T> extends CommandArgument.AbstractCo
     @SuppressWarnings({"unchecked"})
     protected boolean canBeConvert(@NotNull CommandContext context, @NotNull String argument) {
         try {
-            ConverterResult<T> result = (ConverterResult<T>) method.invoke(command, context, argument, false);
-            return Validation.requireNotNull(result, "converter result cannot be null.").isSuccess();
+            ConverterResult<T> result =
+                    (ConverterResult<T>) method.invoke(command, context, argument, false);
+            return Validation.requireNotNull(result, "converter result cannot be null.")
+                    .isSuccess();
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new CommandException(e);
         }

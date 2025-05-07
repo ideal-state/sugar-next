@@ -29,11 +29,9 @@ import team.idealstate.minecraft.next.common.context.annotation.component.Config
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.function.Lazy;
 import team.idealstate.minecraft.next.common.logging.Log;
-import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class ConfigurationBeanFactory
-        extends AbstractBeanFactory<Configuration, Object> {
+public final class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration, Object> {
 
     private final Lazy<Yaml> lazy = Lazy.of(Yaml::new);
 
@@ -48,7 +46,10 @@ public final class ConfigurationBeanFactory
         try {
             new URI(uri);
         } catch (URISyntaxException e) {
-            Log.warn(String.format("%s: Invalid configuration uri '%s'. (%s)", getMetadataType().getSimpleName(), uri, e.getMessage()));
+            Log.warn(
+                    String.format(
+                            "%s: Invalid configuration uri '%s'. (%s)",
+                            getMetadataType().getSimpleName(), uri, e.getMessage()));
         }
         return true;
     }

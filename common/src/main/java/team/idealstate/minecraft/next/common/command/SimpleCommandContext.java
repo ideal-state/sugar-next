@@ -19,7 +19,6 @@ package team.idealstate.minecraft.next.common.command;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
@@ -42,15 +41,15 @@ final class SimpleCommandContext extends LinkedHashMap<String, Object> implement
 
     private final Map<Class<?>, CommandArgument.Completer> completers = new ConcurrentHashMap<>();
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public CommandArgument.Completer getCompleter(@NotNull Class<?> argumentType) {
         Validation.notNull(argumentType, "argumentType must not be null.");
         return completers.get(argumentType);
     }
 
     @Override
-    public void setCompleter(@NotNull Class<?> argumentType, @Nullable CommandArgument.Completer completer) {
+    public void setCompleter(
+            @NotNull Class<?> argumentType, @Nullable CommandArgument.Completer completer) {
         Validation.notNull(argumentType, "argumentType must not be null.");
         if (completer == null) {
             completers.remove(argumentType);
@@ -59,10 +58,10 @@ final class SimpleCommandContext extends LinkedHashMap<String, Object> implement
         }
     }
 
-    private final Map<Class<?>, CommandArgument.Converter<?>> converters = new ConcurrentHashMap<>();
+    private final Map<Class<?>, CommandArgument.Converter<?>> converters =
+            new ConcurrentHashMap<>();
 
-    @Nullable
-    @Override
+    @Nullable @Override
     @SuppressWarnings({"unchecked"})
     public <T> CommandArgument.Converter<T> getConverter(@NotNull Class<T> argumentType) {
         Validation.notNull(argumentType, "argumentType must not be null.");
@@ -70,7 +69,8 @@ final class SimpleCommandContext extends LinkedHashMap<String, Object> implement
     }
 
     @Override
-    public <T> void setConverter(@NotNull Class<T> argumentType, @Nullable CommandArgument.Converter<T> converter) {
+    public <T> void setConverter(
+            @NotNull Class<T> argumentType, @Nullable CommandArgument.Converter<T> converter) {
         Validation.notNull(argumentType, "argumentType must not be null.");
         if (converter == null) {
             converters.remove(argumentType);

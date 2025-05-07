@@ -55,9 +55,9 @@ public final class ExampleCommand {
     public CommandResult sum(
             CommandContext context,
             @CommandArgument(value = "a", converter = "convertToInt") Integer first,
-            @CommandArgument(value = "b", converter = "convertToInt") Integer second
-    ) {
-        return CommandResult.success(String.format("context: %s, sum: %s", context, first + second));
+            @CommandArgument(value = "b", converter = "convertToInt") Integer second) {
+        return CommandResult.success(
+                String.format("context: %s, sum: %s", context, first + second));
     }
 
     @CommandHandler("sum {a} {b} {c}")
@@ -65,21 +65,22 @@ public final class ExampleCommand {
             CommandContext context,
             @CommandArgument(value = "a", converter = "convertToInt") Integer first,
             @CommandArgument(value = "b", converter = "convertToInt") Integer second,
-            @CommandArgument(value = "c", converter = "convertToInt") Integer third
-    ) {
-        return CommandResult.success(String.format("context: %s, sum: %s", context, first + second + third));
+            @CommandArgument(value = "c", converter = "convertToInt") Integer third) {
+        return CommandResult.success(
+                String.format("context: %s, sum: %s", context, first + second + third));
     }
 
-    @NotNull
-    public ConverterResult<Integer> convertToInt(@NotNull CommandContext context, @NotNull String argument, boolean onConversion) throws CommandArgumentConversionException {
+    @NotNull public ConverterResult<Integer> convertToInt(
+            @NotNull CommandContext context, @NotNull String argument, boolean onConversion)
+            throws CommandArgumentConversionException {
         boolean canBeConvert = StringUtils.isInteger(argument);
         if (!onConversion) {
             return canBeConvert ? ConverterResult.success() : ConverterResult.failure();
         }
         if (!canBeConvert) {
-            throw new CommandArgumentConversionException(String.format("The argument '%s' cannot be convert to int.", argument));
+            throw new CommandArgumentConversionException(
+                    String.format("The argument '%s' cannot be convert to int.", argument));
         }
         return ConverterResult.success(Integer.parseInt(argument));
     }
-
 }

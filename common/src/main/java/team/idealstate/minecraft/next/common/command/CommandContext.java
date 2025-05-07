@@ -18,7 +18,6 @@ package team.idealstate.minecraft.next.common.command;
 
 import java.util.Collections;
 import java.util.Map;
-
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
@@ -38,13 +37,13 @@ public interface CommandContext extends Map<String, Object> {
 
     @NotNull CommandSender getSender();
 
-    @Nullable
-    CommandArgument.Completer getCompleter(@NotNull Class<?> argumentType);
+    @Nullable CommandArgument.Completer getCompleter(@NotNull Class<?> argumentType);
 
-    void setCompleter(@NotNull Class<?> argumentType, @Nullable CommandArgument.Completer completer);
+    void setCompleter(
+            @NotNull Class<?> argumentType, @Nullable CommandArgument.Completer completer);
 
-    @Nullable
-    <T> CommandArgument.Converter<T> getConverter(@NotNull Class<T> argumentType);
+    @Nullable <T> CommandArgument.Converter<T> getConverter(@NotNull Class<T> argumentType);
 
-    <T> void setConverter(@NotNull Class<T> argumentType, @Nullable CommandArgument.Converter<T> converter);
+    <T> void setConverter(
+            @NotNull Class<T> argumentType, @Nullable CommandArgument.Converter<T> converter);
 }

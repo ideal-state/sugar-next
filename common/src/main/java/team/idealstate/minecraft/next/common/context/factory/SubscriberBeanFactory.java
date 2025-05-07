@@ -18,8 +18,7 @@ package team.idealstate.minecraft.next.common.context.factory;
 
 import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 
-public final class SubscriberBeanFactory
-        extends NoArgsConstructorBeanFactory<Subscriber, Object> {
+public final class SubscriberBeanFactory extends NoArgsConstructorBeanFactory<Subscriber, Object> {
     public SubscriberBeanFactory() {
         super(Subscriber.class, Object.class);
     }
