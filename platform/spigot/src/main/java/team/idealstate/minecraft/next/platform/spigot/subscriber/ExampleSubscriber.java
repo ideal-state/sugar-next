@@ -24,7 +24,7 @@ import team.idealstate.minecraft.next.common.context.annotation.feature.Environm
 import team.idealstate.minecraft.next.common.logging.Log;
 
 @Subscriber
-@Environment("DEBUG")
+@Environment("development")
 public final class ExampleSubscriber implements Listener {
 
     @EventHandler
