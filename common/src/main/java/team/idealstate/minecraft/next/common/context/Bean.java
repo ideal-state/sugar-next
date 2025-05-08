@@ -21,6 +21,8 @@ import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface Bean<M extends Annotation, T> {
 
+    @NotNull String getName();
+
     @NotNull M getMetadata();
 
     @NotNull T getInstance();

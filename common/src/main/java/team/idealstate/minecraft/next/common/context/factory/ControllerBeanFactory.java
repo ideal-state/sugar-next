@@ -29,17 +29,16 @@ public final class ControllerBeanFactory extends NoArgsConstructorBeanFactory<Co
 
     @Override
     protected boolean doCanBeCreated(
-            @NotNull Context context, @NotNull Controller metadata, @NotNull Class<?> marked) {
-        String name = metadata.value();
+            @NotNull Context context, @NotNull Controller metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         try {
-            CommandLine.validateName(name);
+            CommandLine.validateName(beanName);
         } catch (IllegalArgumentException e) {
             Log.warn(
                     String.format(
                             "%s: Invalid controller name '%s'. (%s)",
-                            getMetadataType().getSimpleName(), name, e.getMessage()));
+                            getMetadataType().getSimpleName(), beanName, e.getMessage()));
             return false;
         }
-        return super.doCanBeCreated(context, metadata, marked);
+        return super.doCanBeCreated(context, metadata, beanName, marked);
     }
 }

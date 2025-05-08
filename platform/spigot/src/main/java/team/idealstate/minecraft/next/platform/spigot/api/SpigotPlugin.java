@@ -94,8 +94,7 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
             return;
         }
         for (Bean<Controller, Command> bean : beans) {
-            Controller metadata = bean.getMetadata();
-            String name = metadata.value();
+            String name = bean.getName();
             PluginCommand pluginCommand = getCommand(name);
             if (pluginCommand == null) {
                 continue;
@@ -127,9 +126,8 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
                 String author = context.getName();
                 String version = context.getVersion();
                 for (Bean<Controller, Placeholder> bean : beans) {
-                    Controller metadata = bean.getMetadata();
                     Placeholder instance = bean.getInstance();
-                    SpigotPlaceholderExpansion.of(metadata.value(), author, version, instance)
+                    SpigotPlaceholderExpansion.of(bean.getName(), author, version, instance)
                             .register();
                 }
             }

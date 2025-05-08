@@ -29,11 +29,6 @@ import team.idealstate.minecraft.next.common.context.Context;
 public @interface Configuration {
 
     /**
-     * @return 配置的主要名称（标识符），为 "" 时则使用类名
-     */
-    String value() default "";
-
-    /**
      * @return 配置文件的 {@link java.net.URI}
      * @see Context#getResource(String)
      */

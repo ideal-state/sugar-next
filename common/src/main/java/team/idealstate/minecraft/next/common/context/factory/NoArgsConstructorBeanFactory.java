@@ -31,7 +31,7 @@ public abstract class NoArgsConstructorBeanFactory<M extends Annotation, T>
 
     @Override
     protected boolean doCanBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         if (!getInstanceType().isAssignableFrom(marked)) {
             Log.warn(
                     String.format(
@@ -55,7 +55,7 @@ public abstract class NoArgsConstructorBeanFactory<M extends Annotation, T>
 
     @NotNull @Override
     @SuppressWarnings({"unchecked"})
-    protected T doCreate(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
+    protected T doCreate(@NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         try {
             return (T) marked.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {

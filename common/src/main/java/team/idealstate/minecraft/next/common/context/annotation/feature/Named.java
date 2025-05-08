@@ -14,23 +14,22 @@
  *    limitations under the License.
  */
 
-package team.idealstate.minecraft.next.common.context.annotation.component;
+package team.idealstate.minecraft.next.common.context.annotation.feature;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.minecraft.next.common.context.BeanFactory;
-import team.idealstate.minecraft.next.common.eventbus.Event;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Subscriber {
+public @interface Named {
 
     /**
-     * @return 订阅的事件类型，为 {@link Event} 时可能有不同的订阅策略，具体由其对应的 {@link BeanFactory} 来决定
+     * @return 组件的主要名称（标识符），为 "" 时则使用所在类的完全限定名称（{@link Class#getName()}），该名称应是上下文唯一且大小写敏感的
      */
-    Class<? extends Event> event() default Event.class;
+    String value() default "";
 }

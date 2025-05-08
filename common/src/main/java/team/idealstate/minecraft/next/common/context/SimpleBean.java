@@ -24,23 +24,34 @@ import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 final class SimpleBean<M extends Annotation, T> implements Bean<M, T> {
 
     private final M metadata;
+    private final String name;
     private final Lazy<T> lazy;
     private final boolean initialized;
 
-    SimpleBean(@NotNull M metadata, @NotNull T instance) {
+    SimpleBean(@NotNull M metadata, @NotNull String name, @NotNull T instance) {
         Validation.notNull(metadata, "metadata must not be null.");
+        Validation.notNullOrBlank(name, "name must not be null.");
         Validation.notNull(instance, "instance must not be null.");
         this.metadata = metadata;
+        this.name = name;
         this.lazy = Lazy.of(instance);
         this.initialized = true;
     }
 
-    SimpleBean(@NotNull M metadata, @NotNull Lazy<T> lazy) {
+    SimpleBean(@NotNull M metadata, @NotNull String name, @NotNull Lazy<T> lazy) {
         Validation.notNull(metadata, "metadata must not be null.");
+        Validation.notNullOrBlank(name, "name must not be null.");
         Validation.notNull(lazy, "lazy must not be null.");
         this.metadata = metadata;
+        this.name = name;
         this.lazy = lazy;
         this.initialized = false;
+    }
+
+    @NotNull
+    @Override
+    public String getName() {
+        return name;
     }
 
     @NotNull @Override

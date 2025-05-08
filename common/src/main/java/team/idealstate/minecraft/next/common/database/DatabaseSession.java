@@ -7,7 +7,7 @@ import java.io.Closeable;
 public interface DatabaseSession extends Closeable {
 
     @NotNull
-    <T> T getDriver(@NotNull Class<T> driverType);
+    <T> T getRepository(@NotNull Class<T> repositoryType);
 
     void commit();
 

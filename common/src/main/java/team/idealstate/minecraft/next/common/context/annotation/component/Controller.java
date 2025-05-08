@@ -26,9 +26,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Controller {
-
-    /**
-     * @return 控制器的主要名称（标识符），为 "" 时则使用类名
-     */
-    String value() default "";
 }

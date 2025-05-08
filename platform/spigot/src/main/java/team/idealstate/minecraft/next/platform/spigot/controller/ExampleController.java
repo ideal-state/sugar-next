@@ -32,12 +32,14 @@ import team.idealstate.minecraft.next.common.command.exception.CommandArgumentCo
 import team.idealstate.minecraft.next.common.context.ContextHolder;
 import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Named;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 
-@Controller("minecraftnext")
+@Named("minecraftnext")
+@Controller
 @Environment("DEBUG")
 public final class ExampleController implements ContextHolderAware, Command, Placeholder {
 

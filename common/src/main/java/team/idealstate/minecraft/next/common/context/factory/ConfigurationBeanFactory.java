@@ -41,7 +41,7 @@ public final class ConfigurationBeanFactory extends AbstractBeanFactory<Configur
 
     @Override
     protected boolean doCanBeCreated(
-            @NotNull Context context, @NotNull Configuration metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull Configuration metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         String uri = metadata.uri();
         try {
             new URI(uri);
@@ -56,9 +56,9 @@ public final class ConfigurationBeanFactory extends AbstractBeanFactory<Configur
 
     @NotNull @Override
     protected Object doCreate(
-            @NotNull Context context, @NotNull Configuration metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull Configuration metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         try {
-            return functional(context.getResource(metadata.value()))
+            return functional(context.getResource(metadata.uri()))
                     .when(Objects::nonNull)
                     .convert(InputStreamReader::new)
                     .use(Object.class, reader -> lazy.get().loadAs(reader, marked));

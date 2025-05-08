@@ -42,13 +42,14 @@ public abstract class AbstractBeanFactory<M extends Annotation, T> implements Be
     }
 
     protected abstract boolean doCanBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
+            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
 
     @Override
     public final boolean canBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
         Validation.notNull(context, "context must not be null.");
         Validation.notNull(metadata, "metadata must not be null.");
+        Validation.notNullOrBlank(beanName, "beanName must not be null or blank.");
         Validation.notNull(marked, "marked must not be null.");
         Class<M> metadataType = getMetadataType();
         Validation.is(
@@ -56,16 +57,16 @@ public abstract class AbstractBeanFactory<M extends Annotation, T> implements Be
                 String.format(
                         "metadata '%s' must be an instance of metadataType '%s'.",
                         metadata, metadataType));
-        return doCanBeCreated(context, metadata, marked);
+        return doCanBeCreated(context, metadata, beanName, marked);
     }
 
     @NotNull protected abstract T doCreate(
-            @NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked);
+            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
 
     @NotNull @Override
-    public final T create(@NotNull Context context, @NotNull M metadata, @NotNull Class<?> marked) {
-        Validation.is(canBeCreated(context, metadata, marked), "instance cannot be created.");
-        T instance = doCreate(context, metadata, marked);
+    public final T create(@NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
+        Validation.is(canBeCreated(context, metadata, beanName, marked), "instance cannot be created.");
+        T instance = doCreate(context, metadata, beanName, marked);
         Class<T> instanceType = getInstanceType();
         Validation.is(
                 instanceType.isInstance(instance),

@@ -58,9 +58,6 @@ public interface Context {
 
     @Nullable InputStream getResource(@NotNull String path) throws IOException;
 
-    @Nullable
-    DatabaseSessionFactory getDatabaseSessionFactory();
-
     boolean isActive();
 
     void initialize();

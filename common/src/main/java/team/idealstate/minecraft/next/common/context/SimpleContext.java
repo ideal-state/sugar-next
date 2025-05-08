@@ -25,7 +25,6 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.matcher.ElementMatchers;
 import org.objectweb.asm.ClassReader;
 import team.idealstate.minecraft.next.common.banner.Banner;
@@ -38,13 +37,18 @@ import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingE
 import team.idealstate.minecraft.next.common.context.annotation.component.Component;
 import team.idealstate.minecraft.next.common.context.annotation.component.Configuration;
 import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
+import team.idealstate.minecraft.next.common.context.annotation.component.Database;
+import team.idealstate.minecraft.next.common.context.annotation.component.Repository;
+import team.idealstate.minecraft.next.common.context.annotation.component.Service;
 import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Autowire;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Autowired;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Environment;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Laziness;
+import team.idealstate.minecraft.next.common.context.annotation.feature.Named;
 import team.idealstate.minecraft.next.common.context.annotation.feature.Transaction;
 import team.idealstate.minecraft.next.common.context.aware.Aware;
+import team.idealstate.minecraft.next.common.context.aware.BeanNameAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextAware;
 import team.idealstate.minecraft.next.common.context.aware.ContextHolderAware;
 import team.idealstate.minecraft.next.common.context.aware.EventBusAware;
@@ -55,6 +59,9 @@ import team.idealstate.minecraft.next.common.context.exception.ContextException;
 import team.idealstate.minecraft.next.common.context.factory.ComponentBeanFactory;
 import team.idealstate.minecraft.next.common.context.factory.ConfigurationBeanFactory;
 import team.idealstate.minecraft.next.common.context.factory.ControllerBeanFactory;
+import team.idealstate.minecraft.next.common.context.factory.DatabaseBeanFactory;
+import team.idealstate.minecraft.next.common.context.factory.RepositoryBeanFactory;
+import team.idealstate.minecraft.next.common.context.factory.ServiceBeanFactory;
 import team.idealstate.minecraft.next.common.context.factory.SubscriberBeanFactory;
 import team.idealstate.minecraft.next.common.context.lifecycle.Destroyable;
 import team.idealstate.minecraft.next.common.context.lifecycle.Initializable;
@@ -94,7 +101,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -120,7 +126,6 @@ final class SimpleContext implements Context {
     @NonNull private final ContextHolder contextHolder;
     @NonNull private final ContextLifecycle contextLifecycle;
     @NonNull private final EventBus eventBus;
-    private final DatabaseSessionFactory databaseSessionFactory;
     private volatile int status = STATUS_DESTROYED;
     private final Lock lock = new ReentrantLock();
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
@@ -257,12 +262,6 @@ final class SimpleContext implements Context {
             return Files.newInputStream(file.toPath());
         }
         return null;
-    }
-
-    @Nullable
-    @Override
-    public DatabaseSessionFactory getDatabaseSessionFactory() {
-        return databaseSessionFactory;
     }
 
     @Override
@@ -410,8 +409,9 @@ final class SimpleContext implements Context {
 
     private final Map<Class<? extends Annotation>, Deque<Class<?>>> markedClasses =
             new ConcurrentHashMap<>();
-    private final Map<ComponentKey, SimpleBean<?, ?>> components = new ConcurrentHashMap<>();
-    private final Set<ComponentKey> inProgress = new CopyOnWriteArraySet<>();
+    private final Map<BeanKey, SimpleBean<?, ?>> beans = new ConcurrentHashMap<>();
+    private final Set<String> beanNames = new CopyOnWriteArraySet<>();
+    private final Set<BeanKey> inProgress = new CopyOnWriteArraySet<>();
 
     @Nullable @Override
     public <M extends Annotation> Bean<M, ?> getBean(@NotNull Class<M> metadataType) {
@@ -419,92 +419,15 @@ final class SimpleContext implements Context {
     }
 
     @Nullable @Override
-    @SuppressWarnings({"unchecked", "DuplicatedCode"})
     public <M extends Annotation, T> Bean<M, T> getBean(
             @NotNull Class<M> metadataType, @NotNull Class<T> beanType) {
         Validation.notNull(metadataType, "metadataType must not be null.");
         Validation.notNull(beanType, "beanType must not be null.");
-        return (Bean<M, T>)
-                mustDependOn(
-                        STATUS_ENABLED,
-                        true,
-                        true,
-                        false,
-                        null,
-                        it -> {
-                            Deque<Class<?>> markedClasses = it.markedClasses.get(metadataType);
-                            if (markedClasses == null || markedClasses.isEmpty()) {
-                                return null;
-                            }
-                            BeanFactory<M, ?> beanFactory = getBeanFactory(metadataType, beanType);
-                            Class<?> activedBeanType = beanType;
-                            if (beanFactory == null) {
-                                if (Object.class.equals(beanType)) {
-                                    return null;
-                                }
-                                beanFactory = getBeanFactory(metadataType, Object.class);
-                                if (beanFactory == null) {
-                                    return null;
-                                }
-                                activedBeanType = Object.class;
-                            }
-                            for (Class<?> marked : markedClasses) {
-                                M metadata = marked.getAnnotation(metadataType);
-                                Validation.notNull(metadata, "metadata must not be null.");
-                                assert metadata != null;
-                                ComponentKey componentKey =
-                                        new ComponentKey(metadataType, marked, beanFactory);
-                                SimpleBean<M, ?> component =
-                                        (SimpleBean<M, ?>) components.get(componentKey);
-                                if (component != null) {
-                                    if (activedBeanType.equals(beanType)
-                                            || beanType.isInstance(component.getInstance())) {
-                                        it.components.put(componentKey, component);
-                                        return component;
-                                    }
-                                    continue;
-                                }
-                                if (!beanFactory.canBeCreated(it, metadata, marked)) {
-                                    continue;
-                                }
-                                Environment componentEnv = marked.getAnnotation(Environment.class);
-                                if (componentEnv != null) {
-                                    String env = componentEnv.value();
-                                    if (!StringUtils.isEmpty(env)
-                                            && !it.getEnvironment().equalsIgnoreCase(env)) {
-                                        continue;
-                                    }
-                                }
-                                if (!it.inProgress.add(componentKey)) {
-                                    throw new IllegalStateException(
-                                            "component is in progress. (circular)");
-                                }
-                                if (marked.getAnnotation(Laziness.class) == null) {
-                                    T instance = (T) doCreate(it, beanFactory, metadata, marked);
-                                    component = new SimpleBean<>(metadata, instance);
-                                } else {
-                                    BeanFactory<M, ?> finalBeanFactory = beanFactory;
-                                    component =
-                                            new SimpleBean<>(
-                                                    metadata,
-                                                    Lazy.of(
-                                                            () ->
-                                                                    doCreate(
-                                                                            it,
-                                                                            finalBeanFactory,
-                                                                            metadata,
-                                                                            marked)));
-                                }
-                                if (activedBeanType.equals(beanType)
-                                        || beanType.isInstance(component.getInstance())) {
-                                    it.components.put(componentKey, component);
-                                    it.inProgress.remove(componentKey);
-                                    return component;
-                                }
-                                it.inProgress.remove(componentKey);
-                            }
-                            return null;
-                        });
+        List<Bean<M, T>> beans = doGetBeans(metadataType, beanType, 1);
+        if (beans.isEmpty()) {
+            return null;
+        }
+        return beans.get(0);
     }
 
     @NotNull @Override
@@ -514,11 +437,16 @@ final class SimpleContext implements Context {
     }
 
     @NotNull @Override
-    @SuppressWarnings({"unchecked", "rawtypes", "DuplicatedCode"})
     public <M extends Annotation, T> List<Bean<M, T>> getBeans(
             @NotNull Class<M> metadataType, @NotNull Class<T> beanType) {
         Validation.notNull(metadataType, "metadataType must not be null.");
         Validation.notNull(beanType, "beanType must not be null.");
+        return doGetBeans(metadataType, beanType, -1);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <M extends Annotation, T> List<Bean<M, T>> doGetBeans(
+            @NotNull Class<M> metadataType, @NotNull Class<T> beanType, int limit) {
         return mustDependOn(
                 STATUS_ENABLED,
                 true,
@@ -542,23 +470,28 @@ final class SimpleContext implements Context {
                         }
                         activedBeanType = Object.class;
                     }
-                    List<Bean<M, T>> beans = new ArrayList<>(markedClasses.size());
+                    List<Bean<M, T>> beans;
+                    if (limit > 0) {
+                        beans = new ArrayList<>(Math.min(markedClasses.size(), limit));
+                    } else {
+                        beans = new ArrayList<>(markedClasses.size());
+                    }
                     for (Class<?> marked : markedClasses) {
+                        if (limit > 0 && beans.size() >= limit) {
+                            break;
+                        }
                         M metadata = marked.getAnnotation(metadataType);
                         Validation.notNull(metadata, "metadata must not be null.");
                         assert metadata != null;
-                        ComponentKey componentKey =
-                                new ComponentKey(metadataType, marked, beanFactory);
+                        BeanKey beanKey =
+                                new BeanKey(metadataType, marked, beanFactory);
                         SimpleBean<M, ?> component =
-                                (SimpleBean<M, ?>) it.components.get(componentKey);
+                                (SimpleBean<M, ?>) it.beans.get(beanKey);
                         if (component != null) {
                             if (activedBeanType.equals(beanType)
                                     || beanType.isInstance(component.getInstance())) {
                                 beans.add((SimpleBean) component);
                             }
-                            continue;
-                        }
-                        if (!beanFactory.canBeCreated(it, metadata, marked)) {
                             continue;
                         }
                         Environment componentEnv = marked.getAnnotation(Environment.class);
@@ -569,31 +502,49 @@ final class SimpleContext implements Context {
                                 continue;
                             }
                         }
-                        if (!it.inProgress.add(componentKey)) {
+                        Named named = marked.getAnnotation(Named.class);
+                        String beanName;
+                        if (named == null || StringUtils.isNullOrBlank(named.value())) {
+                            beanName = marked.getName();
+                        } else {
+                            beanName = named.value();
+                        }
+                        if (it.beanNames.contains(beanName)) {
+                            throw new IllegalStateException(
+                                    "bean name is duplicated. (beanName="
+                                            + beanName
+                                            + ")");
+                        }
+                        if (!beanFactory.canBeCreated(it, metadata, beanName, marked)) {
+                            continue;
+                        }
+                        if (!it.inProgress.add(beanKey)) {
                             throw new IllegalStateException("component is in progress. (circular)");
                         }
                         if (marked.getAnnotation(Laziness.class) == null) {
-                            T instance = (T) doCreate(it, beanFactory, metadata, marked);
-                            component = new SimpleBean<>(metadata, instance);
+                            T instance = (T) doCreate(it, beanFactory, metadata, beanName, marked);
+                            component = new SimpleBean<>(metadata, beanName, instance);
                         } else {
                             BeanFactory<M, ?> finalBeanFactory = beanFactory;
                             component =
                                     new SimpleBean<>(
                                             metadata,
+                                            beanName,
                                             Lazy.of(
                                                     () ->
                                                             doCreate(
                                                                     it,
                                                                     finalBeanFactory,
-                                                                    metadata,
+                                                                    metadata, beanName,
                                                                     marked)));
                         }
                         if (activedBeanType.equals(beanType)
                                 || beanType.isInstance(component.getInstance())) {
-                            it.components.put(componentKey, component);
                             beans.add((SimpleBean) component);
                         }
-                        it.inProgress.remove(componentKey);
+                        it.beanNames.add(beanName);
+                        it.beans.put(beanKey, component);
+                        it.inProgress.remove(beanKey);
                     }
                     return beans;
                 });
@@ -604,18 +555,33 @@ final class SimpleContext implements Context {
             @NotNull Context context,
             @NotNull BeanFactory<M, T> beanFactory,
             @NotNull M metadata,
+            @NotNull String beanName,
             @NotNull Class<?> marked) {
-        T instance = beanFactory.create(context, metadata, marked);
+        Log.debug(() -> String.format(
+                "doCreate: creating bean. (beanName='%s', beanType='%s', marked='%s')",
+                beanName,
+                beanFactory.getInstanceType().getName(),
+                marked.getName()
+        ));
+        Log.debug(() -> String.format(
+                "doCreate: create instance. (beanName='%s', metadata='%s')",
+                beanName,
+                metadata
+        ));
+        T instance = beanFactory.create(context, metadata, beanName, marked);
+        Log.debug(() -> String.format(
+                "doCreate: created instance. (beanName='%s', runtimeType='%s')",
+                beanName,
+                instance.getClass().getName()
+        ));
         Validation.notNull(instance, "instance must not be null.");
         if (instance instanceof Aware) {
+            Log.debug(() -> String.format(
+                    "doCreate: inject aware. (beanName='%s')",
+                    beanName
+            ));
             if (instance instanceof ContextAware) {
                 ((ContextAware) instance).setContext(context);
-            }
-            if (instance instanceof MetadataAware) {
-                ((MetadataAware) instance).setMetadata(metadata);
-            }
-            if (instance instanceof MarkedAware) {
-                ((MarkedAware) instance).setMarkedClass(marked);
             }
             if (instance instanceof ContextHolderAware) {
                 ((ContextHolderAware) instance).setContextHolder(contextHolder);
@@ -623,22 +589,72 @@ final class SimpleContext implements Context {
             if (instance instanceof EventBusAware) {
                 ((EventBusAware) instance).setEventBus(eventBus);
             }
+            if (instance instanceof MetadataAware) {
+                ((MetadataAware) instance).setMetadata(metadata);
+            }
+            if (instance instanceof BeanNameAware) {
+                ((BeanNameAware) instance).setBeanName(beanName);
+            }
+            if (instance instanceof MarkedAware) {
+                ((MarkedAware) instance).setMarkedClass(marked);
+            }
+            Log.debug(() -> String.format(
+                    "doCreate: injected aware. (beanName='%s')",
+                    beanName
+            ));
         }
         Class<?> instanceType = instance.getClass();
         Method[] methods = instanceType.getMethods();
         T proxy;
         if (methods.length != 0) {
+            Log.debug(() -> String.format(
+                    "doCreate: autowire methods. (beanName='%s')",
+                    beanName
+            ));
             doAutowire(instance, instanceType, methods);
+            Log.debug(() -> String.format(
+                    "doCreate: autowired methods. (beanName='%s')",
+                    beanName
+            ));
+            Log.debug(() -> String.format(
+                    "doCreate: maybe proxy. (beanName='%s')",
+                    beanName
+            ));
             proxy = maybeProxy(instance, instanceType, methods);
+            Log.debug(() -> String.format(
+                    "doCreate: maybe proxied. (beanName='%s')",
+                    beanName
+            ));
         } else {
             proxy = instance;
         }
         if (instance instanceof SelfAware) {
+            Log.debug(() -> String.format(
+                    "doCreate: inject self. (beanName='%s')",
+                    beanName
+            ));
             ((SelfAware) instance).setSelf(proxy);
+            Log.debug(() -> String.format(
+                    "doCreate: injected self. (beanName='%s')",
+                    beanName
+            ));
         }
         if (proxy instanceof Initializable) {
+            Log.debug(() -> String.format(
+                    "doCreate: initialize bean. (beanName='%s')",
+                    beanName
+            ));
             ((Initializable) proxy).initialize();
+            Log.debug(() -> String.format(
+                    "doCreate: initialized bean. (beanName='%s')",
+                    beanName
+            ));
         }
+        Log.debug(() -> String.format(
+                "doCreate: created bean. (beanName='%s', runtimeType='%s')",
+                beanName,
+                proxy.getClass().getName()
+        ));
         return proxy;
     }
 
@@ -747,7 +763,7 @@ final class SimpleContext implements Context {
         transactions = Collections.unmodifiableMap(transactions);
         Class<?> proxyType = functional(new ByteBuddy().subclass(instanceType)
                 .method(ElementMatchers.any().and(ElementMatchers.not(ElementMatchers.isStatic())))
-                .intercept(MethodDelegation.to(new TransactionInterceptor(this, instance, transactions)))
+                .intercept(MethodDelegation.to(new ProxyInterceptor(this, instance, transactions)))
                 .make())
                 .use(Class.class, unloaded -> unloaded.load(getClassLoader()).getLoaded());
         try {
@@ -764,10 +780,13 @@ final class SimpleContext implements Context {
     private void doInitialize() {}
 
     private void doAfterInitialize() {
+        setBeanFactory(Subscriber.class, new SubscriberBeanFactory());
         setBeanFactory(Component.class, new ComponentBeanFactory());
         setBeanFactory(Configuration.class, new ConfigurationBeanFactory());
+        setBeanFactory(Database.class, new DatabaseBeanFactory());
+        setBeanFactory(Repository.class, new RepositoryBeanFactory());
+        setBeanFactory(Service.class, new ServiceBeanFactory());
         setBeanFactory(Controller.class, new ControllerBeanFactory());
-        setBeanFactory(Subscriber.class, new SubscriberBeanFactory());
     }
 
     private void doBeforeLoad() {}
@@ -871,11 +890,11 @@ final class SimpleContext implements Context {
     private void doBeforeDestroy() {}
 
     private void doDestroy() {
-        if (components.isEmpty()) {
+        if (beans.isEmpty()) {
             return;
         }
         int count = 0;
-        for (SimpleBean<?, ?> component : components.values()) {
+        for (SimpleBean<?, ?> component : beans.values()) {
             try {
                 if (!component.isInitialized()) {
                     continue;
@@ -889,7 +908,7 @@ final class SimpleContext implements Context {
                 count++;
             }
         }
-        components.clear();
+        beans.clear();
         if (count > 0) {
             throw new IllegalStateException("failed to destroy " + count + " components.");
         }
@@ -899,7 +918,7 @@ final class SimpleContext implements Context {
 
     @RequiredArgsConstructor
     @Getter(AccessLevel.PRIVATE)
-    private static final class ComponentKey {
+    private static final class BeanKey {
         @NonNull private final Class<? extends Annotation> metadataType;
         @NonNull private final Class<?> marked;
         @NonNull private final BeanFactory<?, ?> beanFactory;
@@ -907,7 +926,7 @@ final class SimpleContext implements Context {
         @Override
         public boolean equals(Object o) {
             if (o == null || getClass() != o.getClass()) return false;
-            ComponentKey that = (ComponentKey) o;
+            BeanKey that = (BeanKey) o;
             return Objects.equals(getMetadataType(), that.getMetadataType())
                     && Objects.equals(getMarked(), that.getMarked())
                     && Objects.equals(
@@ -923,7 +942,7 @@ final class SimpleContext implements Context {
     }
 
     @RequiredArgsConstructor
-    private static final class TransactionInterceptor {
+    private static final class ProxyInterceptor {
         @NonNull
         private final Context context;
         @NonNull
@@ -938,10 +957,8 @@ final class SimpleContext implements Context {
             if (transaction == null) {
                 return bound.invokeWithArguments(arguments);
             }
-            DatabaseSessionFactory databaseSessionFactory = context.getDatabaseSessionFactory();
-            if (databaseSessionFactory == null) {
-                throw new IllegalStateException("database session factory is not set.");
-            }
+            List<Bean<Database, DatabaseSessionFactory>> beans = context.getBeans(Database.class, DatabaseSessionFactory.class);
+            DatabaseSessionFactory databaseSessionFactory = getDatabaseSessionFactory(transaction, beans);
             return functional(databaseSessionFactory.openSession(transaction.executionMode(), transaction.isolationLevel()))
                     .use(Object.class, session -> {
                         try {
@@ -951,6 +968,22 @@ final class SimpleContext implements Context {
                             throw e;
                         }
                     });
+        }
+
+        @NotNull
+        private static DatabaseSessionFactory getDatabaseSessionFactory(Transaction transaction, List<Bean<Database, DatabaseSessionFactory>> beans) {
+            DatabaseSessionFactory databaseSessionFactory = null;
+            String databaseSessionFactoryName = transaction.value();
+            for (Bean<Database, DatabaseSessionFactory> bean : beans) {
+                if (databaseSessionFactoryName.equals(bean.getName())) {
+                    databaseSessionFactory = bean.getInstance();
+                    break;
+                }
+            }
+            if (databaseSessionFactory == null) {
+                throw new IllegalStateException("database session factory is not set.");
+            }
+            return databaseSessionFactory;
         }
     }
 }

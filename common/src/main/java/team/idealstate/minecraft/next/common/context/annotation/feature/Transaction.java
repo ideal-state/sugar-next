@@ -29,6 +29,11 @@ import java.lang.annotation.Target;
 @Documented
 public @interface Transaction {
 
+    /**
+     * @return {@link DatabaseSessionFactory} 组件的名称，无默认行为
+     */
+    String value();
+
     int executionMode() default DatabaseSessionFactory.DEFAULT_EXECUTION_MODE;
 
     int isolationLevel() default DatabaseSessionFactory.DEFAULT_ISOLATION_LEVEL;
