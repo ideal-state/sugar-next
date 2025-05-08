@@ -423,7 +423,10 @@ final class SimpleContext implements Context {
             @NotNull Class<M> metadataType, @NotNull Class<T> beanType) {
         Validation.notNull(metadataType, "metadataType must not be null.");
         Validation.notNull(beanType, "beanType must not be null.");
+        long[] start = {System.currentTimeMillis()};
+        Log.debug(() -> String.format("getBean(%s, %s)", metadataType.getName(), beanType.getName()));
         List<Bean<M, T>> beans = doGetBeans(metadataType, beanType, 1);
+        Log.debug(() -> String.format("(%d ms) getBean(%s, %s)", System.currentTimeMillis() - start[0], metadataType.getName(), beanType.getName()));
         if (beans.isEmpty()) {
             return null;
         }
@@ -441,7 +444,11 @@ final class SimpleContext implements Context {
             @NotNull Class<M> metadataType, @NotNull Class<T> beanType) {
         Validation.notNull(metadataType, "metadataType must not be null.");
         Validation.notNull(beanType, "beanType must not be null.");
-        return doGetBeans(metadataType, beanType, -1);
+        long[] start = {System.currentTimeMillis()};
+        Log.debug(() -> String.format("getBeans(%s, %s)", metadataType.getName(), beanType.getName()));
+        List<Bean<M, T>> beans = doGetBeans(metadataType, beanType, -1);
+        Log.debug(() -> String.format("(%d ms) getBeans(%s, %s)", System.currentTimeMillis() - start[0], metadataType.getName(), beanType.getName()));
+        return beans;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -557,27 +564,30 @@ final class SimpleContext implements Context {
             @NotNull M metadata,
             @NotNull String beanName,
             @NotNull Class<?> marked) {
+        long[] start = {System.currentTimeMillis(), System.currentTimeMillis()};
         Log.debug(() -> String.format(
-                "doCreate: creating bean. (beanName='%s', beanType='%s', marked='%s')",
+                "creating bean. (beanName='%s', beanType='%s', marked='%s')",
                 beanName,
                 beanFactory.getInstanceType().getName(),
                 marked.getName()
         ));
         Log.debug(() -> String.format(
-                "doCreate: create instance. (beanName='%s', metadata='%s')",
+                "create instance. (beanName='%s', metadata='%s')",
                 beanName,
                 metadata
         ));
         T instance = beanFactory.create(context, metadata, beanName, marked);
         Log.debug(() -> String.format(
-                "doCreate: created instance. (beanName='%s', runtimeType='%s')",
+                "(%s ms) created instance. (beanName='%s', runtimeType='%s')",
+                System.currentTimeMillis() - start[1],
                 beanName,
                 instance.getClass().getName()
         ));
         Validation.notNull(instance, "instance must not be null.");
         if (instance instanceof Aware) {
+            start[1] = System.currentTimeMillis();
             Log.debug(() -> String.format(
-                    "doCreate: inject aware. (beanName='%s')",
+                    "inject aware. (beanName='%s')",
                     beanName
             ));
             if (instance instanceof ContextAware) {
@@ -599,7 +609,8 @@ final class SimpleContext implements Context {
                 ((MarkedAware) instance).setMarkedClass(marked);
             }
             Log.debug(() -> String.format(
-                    "doCreate: injected aware. (beanName='%s')",
+                    "(%s ms) injected aware. (beanName='%s')",
+                    System.currentTimeMillis() - start[1],
                     beanName
             ));
         }
@@ -607,51 +618,60 @@ final class SimpleContext implements Context {
         Method[] methods = instanceType.getMethods();
         T proxy;
         if (methods.length != 0) {
+            start[1] = System.currentTimeMillis();
             Log.debug(() -> String.format(
-                    "doCreate: autowire methods. (beanName='%s')",
+                    "autowire methods. (beanName='%s')",
                     beanName
             ));
             doAutowire(instance, instanceType, methods);
             Log.debug(() -> String.format(
-                    "doCreate: autowired methods. (beanName='%s')",
+                    "(%s ms) autowired methods. (beanName='%s')",
+                    System.currentTimeMillis() - start[1],
                     beanName
             ));
+            start[1] = System.currentTimeMillis();
             Log.debug(() -> String.format(
-                    "doCreate: maybe proxy. (beanName='%s')",
+                    "maybe proxy. (beanName='%s')",
                     beanName
             ));
             proxy = maybeProxy(instance, instanceType, methods);
             Log.debug(() -> String.format(
-                    "doCreate: maybe proxied. (beanName='%s')",
+                    "(%s ms) maybe proxied. (beanName='%s')",
+                    System.currentTimeMillis() - start[1],
                     beanName
             ));
         } else {
             proxy = instance;
         }
         if (instance instanceof SelfAware) {
+            start[1] = System.currentTimeMillis();
             Log.debug(() -> String.format(
-                    "doCreate: inject self. (beanName='%s')",
+                    "inject self. (beanName='%s')",
                     beanName
             ));
             ((SelfAware) instance).setSelf(proxy);
             Log.debug(() -> String.format(
-                    "doCreate: injected self. (beanName='%s')",
+                    "(%s ms) injected self. (beanName='%s')",
+                    System.currentTimeMillis() - start[1],
                     beanName
             ));
         }
         if (proxy instanceof Initializable) {
+            start[1] = System.currentTimeMillis();
             Log.debug(() -> String.format(
-                    "doCreate: initialize bean. (beanName='%s')",
+                    "initialize bean. (beanName='%s')",
                     beanName
             ));
             ((Initializable) proxy).initialize();
             Log.debug(() -> String.format(
-                    "doCreate: initialized bean. (beanName='%s')",
+                    "(%s ms) initialized bean. (beanName='%s')",
+                    System.currentTimeMillis() - start[1],
                     beanName
             ));
         }
         Log.debug(() -> String.format(
-                "doCreate: created bean. (beanName='%s', runtimeType='%s')",
+                "(%s ms) created bean. (beanName='%s', runtimeType='%s')",
+                System.currentTimeMillis() - start[0],
                 beanName,
                 proxy.getClass().getName()
         ));
@@ -802,18 +822,24 @@ final class SimpleContext implements Context {
         URL location = owner.getProtectionDomain().getCodeSource().getLocation();
         File file = Paths.get(location.toURI()).toFile();
         List<String> classPaths = new LinkedList<>();
+        String ownerName = owner.getName().replace('.', '/');
+        String ownerPackage = owner.getPackage().getName().replace('.', '/');
+        long[] start = {System.currentTimeMillis()};
+        Log.debug(() -> String.format(
+                "scanning package '%s' ...",
+                ownerPackage
+        ));
         functional(new JarFile(file))
                 .use(
                         jar -> {
                             Enumeration<JarEntry> entries = jar.entries();
-                            String ownerName = owner.getName().replace('.', '/');
                             while (entries.hasMoreElements()) {
                                 JarEntry entry = entries.nextElement();
                                 if (entry.isDirectory()) {
                                     continue;
                                 }
                                 String entryName = entry.getName();
-                                if (!entryName.endsWith(".class")) {
+                                if (!entryName.startsWith(ownerPackage) || !entryName.endsWith(".class")) {
                                     continue;
                                 }
                                 String className =
@@ -871,6 +897,11 @@ final class SimpleContext implements Context {
                 }
             }
         }
+        Log.debug(() -> String.format(
+                "(%s ms) scanning package '%s' done.",
+                System.currentTimeMillis() - start[0],
+                ownerPackage
+        ));
     }
 
     private void doAfterLoad() {}
