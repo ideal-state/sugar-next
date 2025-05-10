@@ -1,4 +1,0 @@
-# noinspection ComposeMissingKeys
-include:
-- project: "ideal-state/CICD"
-  file: "gradle/gradlew.gitlab-ci.yml"
