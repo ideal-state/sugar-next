@@ -11,6 +11,8 @@ hikariCP = "4.0.3"
 mybatis = "3.5.19"
 jedis = "6.0.0"
 byte-buddy = "1.17.5"
+h2 = "2.3.232"
+maven-resolver-supplier = "1.9.22"
 
 [plugins]
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
@@ -27,3 +29,5 @@ hikariCP = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikariCP" }
 mybatis = { group = "org.mybatis", name = "mybatis", version.ref = "mybatis" }
 jedis = { group = "redis.clients", name = "jedis", version.ref = "jedis" }
 byte-buddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byte-buddy" }
+h2 = { group = "com.h2database", name = "h2", version.ref = "h2" }
+maven-resolver-supplier = { group = "org.apache.maven.resolver", name = "maven-resolver-supplier", version.ref = "maven-resolver-supplier" }
