@@ -1,4 +1,5 @@
 repositories {
+    sonatype()
     maven {
         name = "spigotmc-repo"
         url = uri("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
