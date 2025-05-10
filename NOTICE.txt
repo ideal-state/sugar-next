@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 
-   minecraft-next
+   sugar-next
    Copyright [2025] [ideal-state]
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,32 @@
 
 ------------------------------------------------------------------------------
 
-    asm
-    (https://gitlab.ow2.org/asm/asm)
-    3-Clause BSD
+    sugar
+    (https://github/ideal-state/sugar)
+    Apache License 2.0
+
+------------------------------------------------------------------------------
+
+    byte-buddy
+    (https://github.com/raphw/byte-buddy)
+    Apache License 2.0
+
+------------------------------------------------------------------------------
+
+    mybatis-3
+    (https://github.com/mybatis/mybatis-3)
+    Apache License 2.0
+
+------------------------------------------------------------------------------
+
+    jedis
+    (https://github.com/redis/jedis)
+    MIT License
+
+------------------------------------------------------------------------------
+
+    HikariCP
+    (https://github.com/brettwooldridge/HikariCP)
+    Apache License 2.0
 
 ------------------------------------------------------------------------------
