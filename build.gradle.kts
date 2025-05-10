@@ -1,43 +1,46 @@
-import org.jreleaser.gradle.plugin.JReleaserExtension
 import org.jreleaser.model.Active
-import team.idealstate.glass.context.util.Extensions
 
 plugins {
-    glass(JAVA) apply false
-    glass(PUBLISHING) apply false
-    glass(SIGNING) apply false
-    spotless(GRADLE) apply false
-    spotless(JAVA) apply false
-    alias(libs.plugins.jreleaser) apply false
+    glass(JAVA)
+    glass(PUBLISHING)
+    glass(SIGNING)
+    spotless(GRADLE)
+    spotless(JAVA)
+    alias(libs.plugins.jreleaser)
 }
 
-group = "team.idealstate.minecraft.next"
+group = "team.idealstate.sugar"
 version = "0.1.0-SNAPSHOT"
 
-subprojects {
-    if (!buildFile.exists()) {
-        return@subprojects
+allprojects {
+    if (!project.buildFile.exists()) {
+        return@allprojects
     }
+
     apply {
         glass(JAVA)
         glass(PUBLISHING)
         glass(SIGNING)
         spotless(GRADLE)
         spotless(JAVA)
-        plugin(rootProject.libs.plugins.jreleaser.get().pluginId)
+        plugin(
+            rootProject.libs.plugins.jreleaser
+                .get()
+                .pluginId,
+        )
     }
 
     group = rootProject.group
     version = rootProject.version
 
-    Extensions.java(this).apply {
+    java {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(21))
             vendor.set(JvmVendorSpec.AZUL)
         }
     }
 
-    Extensions.glass(this).apply {
+    glass {
         release.set(8)
 
         withCopyright()
@@ -60,14 +63,13 @@ subprojects {
         mavenCentral()
     }
 
-    Extensions.publishing(this).apply {
+    publishing {
         repositories {
             project(project)
         }
     }
 
-    val jreleaser = extensions.getByName("jreleaser") as JReleaserExtension
-    jreleaser.apply {
+    jreleaser {
         deploy {
             maven {
                 mavenCentral {
@@ -107,4 +109,15 @@ subprojects {
         dependsOn(tasks.named("spotlessApply"))
         finalizedBy(tasks.named("doDeploy"))
     }
+}
+
+dependencies {
+    api(libs.sugar)
+
+    api(libs.byte.buddy)
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)
 }

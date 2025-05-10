@@ -1,0 +1,9 @@
+# MyBatis
+# 是否启用日志
+log: false
+# 二级缓存相关
+cache:
+  # 是否启用
+  enabled: false
+  # 过期时长（秒）
+  expired: 43200

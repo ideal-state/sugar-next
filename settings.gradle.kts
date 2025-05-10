@@ -1,4 +1,4 @@
-rootProject.name = "minecraft-next"
+rootProject.name = "sugar-next"
 
 pluginManagement {
     repositories {
