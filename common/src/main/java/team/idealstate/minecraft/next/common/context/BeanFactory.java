@@ -19,13 +19,25 @@ package team.idealstate.minecraft.next.common.context;
 import java.lang.annotation.Annotation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public interface BeanFactory<M extends Annotation, T> {
+public interface BeanFactory<M extends Annotation> {
 
     @NotNull Class<M> getMetadataType();
 
-    @NotNull Class<T> getInstanceType();
+    boolean validate(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<?> marked);
 
-    boolean canBeCreated(@NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
+    @NotNull <T> T create(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<T> marked);
 
-    @NotNull T create(@NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
+    @NotNull <T> T proxy(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull T instance);
 }

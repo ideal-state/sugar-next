@@ -20,9 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.net.URI;
 import java.util.List;
 import team.idealstate.minecraft.next.common.context.exception.ContextException;
-import team.idealstate.minecraft.next.common.database.DatabaseSessionFactory;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
@@ -32,7 +32,9 @@ import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
  */
 public interface Context {
 
-    String RESOURCE_BUNDLED = "bundled:";
+    String RESOURCE_CLASSPATH = "classpath:";
+    String RESOURCE_MINECRAFT_NEXT = "minecraftnext:";
+    String RESOURCE_CONTEXT = "context:";
     String PROPERTY_ENVIRONMENT_KEY = "minecraftnext.environment";
 
     @NotNull static Context of(
@@ -50,13 +52,36 @@ public interface Context {
 
     @NotNull ClassLoader getClassLoader();
 
+    @Nullable ContextProperty getProperty(@NotNull String key);
+
+    default boolean hasProperty(@NotNull String key) {
+        return getProperty(key) != null;
+    }
+
+    void registerProperty(@NotNull String key, @NotNull String value);
+
     @NotNull String getName();
 
     @NotNull String getVersion();
 
     @NotNull File getDataFolder();
 
-    @Nullable InputStream getResource(@NotNull String path) throws IOException;
+    /**
+     * @see #getResource(String, ClassLoader)
+     */
+    default @Nullable InputStream getResource(@NotNull String uri) throws IOException {
+        return getResource(uri, getClassLoader());
+    }
+
+    /**
+     * @param uri 资源的 {@link URI}
+     * @param classLoader 资源的 {@link ClassLoader}
+     * @see #RESOURCE_CLASSPATH
+     * @see #RESOURCE_MINECRAFT_NEXT
+     * @see #RESOURCE_CONTEXT
+     */
+    @Nullable InputStream getResource(@NotNull String uri, @NotNull ClassLoader classLoader)
+            throws IOException;
 
     boolean isActive();
 
@@ -70,21 +95,14 @@ public interface Context {
 
     void destroy();
 
-    @Nullable <M extends Annotation> BeanFactory<M, ?> getBeanFactory(@NotNull Class<M> metadataType);
+    @Nullable <M extends Annotation> BeanFactory<?> getBeanFactory(@NotNull Class<M> metadataType);
 
-    @Nullable <M extends Annotation, T> BeanFactory<M, T> getBeanFactory(
-            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
+    <M extends Annotation> void registerBeanFactory(
+            @NotNull Class<M> metadataType, @NotNull BeanFactory<M> beanFactory);
 
-    <M extends Annotation> void setBeanFactory(
-            @NotNull Class<M> metadataType, @Nullable BeanFactory<M, ?> beanFactory);
+    @Nullable <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType);
 
-    @Nullable <M extends Annotation> Bean<M, ?> getBean(@NotNull Class<M> metadataType);
+    @Nullable <T> Bean<T> getBean(@NotNull Class<T> beanType);
 
-    @Nullable <M extends Annotation, T> Bean<M, T> getBean(
-            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
-
-    @NotNull <M extends Annotation> List<Bean<M, ?>> getBeans(@NotNull Class<M> metadataType);
-
-    @NotNull <M extends Annotation, T> List<Bean<M, T>> getBeans(
-            @NotNull Class<M> metadataType, @NotNull Class<T> beanType);
+    @NotNull <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType);
 }

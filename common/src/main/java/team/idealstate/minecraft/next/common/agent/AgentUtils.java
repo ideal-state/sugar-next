@@ -16,60 +16,65 @@
 
 package team.idealstate.minecraft.next.common.agent;
 
+import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.lang.management.ManagementFactory;
+import team.idealstate.minecraft.next.common.banner.Banner;
+import team.idealstate.minecraft.next.common.bundled.Bundled;
+import team.idealstate.minecraft.next.common.context.ContextLibraryLoader;
+import team.idealstate.minecraft.next.common.logging.Log;
 import team.idealstate.minecraft.next.common.reflect.Reflection;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public abstract class AgentUtils {
 
-    private static volatile Instrumentation _inst = null;
-
-    public static void premain(String agentArgs, Instrumentation inst) {
-        _inst = inst;
+    public static void premain(String arguments, Instrumentation instrumentation) {
+        doMain(arguments, instrumentation);
     }
 
-    public static void agentmain(String agentArgs, Instrumentation inst) {
-        _inst = inst;
+    public static void agentmain(String arguments, Instrumentation instrumentation) {
+        doMain(arguments, instrumentation);
+    }
+
+    private static void doMain(String arguments, Instrumentation instrumentation) {
+        Banner.lines(AgentUtils.class).forEach(Log::info);
+        Bundled.release(AgentUtils.class, new File("./"));
+        instrumentation.addTransformer(new ContextLibraryLoader(instrumentation));
+        setInstrumentation(instrumentation);
+    }
+
+    private static volatile Instrumentation INSTRUMENTATION = null;
+
+    private static void setInstrumentation(@NotNull Instrumentation instrumentation) {
+        Validation.notNull(instrumentation, "instrumentation must not be null.");
+        AgentUtils.INSTRUMENTATION = instrumentation;
     }
 
     @NotNull public static Instrumentation instrumentation() {
-        Instrumentation instrumentation = _inst;
-        Validation.notNull(instrumentation, "Instrumentation must not be null");
-        return instrumentation;
+        Instrumentation instrumentation = AgentUtils.INSTRUMENTATION;
+        return Validation.requireNotNull(instrumentation, "instrumentation must not be null.");
     }
 
-    private static String currentProcessId() {
+    @NotNull public static String currentProcessId() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
         return name.split("@")[0];
     }
 
-    public static void attach() {
-        if (_inst == null) {
-            synchronized (AgentUtils.class) {
-                if (_inst == null) {
-                    String path =
-                            AgentUtils.class
-                                    .getProtectionDomain()
-                                    .getCodeSource()
-                                    .getLocation()
-                                    .getPath();
-                    String processId = currentProcessId();
+    public static void attach(@NotNull String agentPath) {
+        Validation.notNullOrBlank(agentPath, "agentPath must not be null or blank.");
+        String processId = currentProcessId();
 
-                    ReflectVirtualMachine reflectVirtualMachine =
-                            Reflection.reflect(null, ReflectVirtualMachine.class, null);
-                    Object virtualMachine = reflectVirtualMachine.attach(processId);
+        ReflectVirtualMachine reflectVirtualMachine =
+                Reflection.reflect(null, ReflectVirtualMachine.class, null);
+        Object virtualMachine = reflectVirtualMachine.attach(processId);
 
-                    reflectVirtualMachine =
-                            Reflection.reflect(null, ReflectVirtualMachine.class, virtualMachine);
-                    try {
-                        reflectVirtualMachine.loadAgent(path);
-                    } finally {
-                        reflectVirtualMachine.detach();
-                    }
-                }
-            }
+        reflectVirtualMachine =
+                Reflection.reflect(null, ReflectVirtualMachine.class, virtualMachine);
+        try {
+            reflectVirtualMachine.loadAgent(agentPath);
+        } finally {
+            reflectVirtualMachine.detach();
         }
     }
 }

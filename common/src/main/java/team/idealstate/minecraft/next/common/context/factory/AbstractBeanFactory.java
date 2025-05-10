@@ -26,30 +26,30 @@ import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class AbstractBeanFactory<M extends Annotation, T> implements BeanFactory<M, T> {
+public abstract class AbstractBeanFactory<M extends Annotation> implements BeanFactory<M> {
 
     @NonNull private final Class<M> metadataType;
-    @NonNull private final Class<T> instanceType;
 
     @NotNull @Override
     public final Class<M> getMetadataType() {
         return metadataType;
     }
 
-    @NotNull @Override
-    public final Class<T> getInstanceType() {
-        return instanceType;
-    }
-
-    protected abstract boolean doCanBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
+    protected abstract boolean doValidate(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<?> marked);
 
     @Override
-    public final boolean canBeCreated(
-            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
+    public final boolean validate(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<?> marked) {
         Validation.notNull(context, "context must not be null.");
-        Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNullOrBlank(beanName, "beanName must not be null or blank.");
+        Validation.notNull(metadata, "metadata must not be null.");
         Validation.notNull(marked, "marked must not be null.");
         Class<M> metadataType = getMetadataType();
         Validation.is(
@@ -57,22 +57,48 @@ public abstract class AbstractBeanFactory<M extends Annotation, T> implements Be
                 String.format(
                         "metadata '%s' must be an instance of metadataType '%s'.",
                         metadata, metadataType));
-        return doCanBeCreated(context, metadata, beanName, marked);
+        return doValidate(context, beanName, metadata, marked);
     }
 
-    @NotNull protected abstract T doCreate(
-            @NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked);
+    @NotNull protected abstract <T> T doCreate(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<T> marked);
 
     @NotNull @Override
-    public final T create(@NotNull Context context, @NotNull M metadata, @NotNull String beanName, @NotNull Class<?> marked) {
-        Validation.is(canBeCreated(context, metadata, beanName, marked), "instance cannot be created.");
-        T instance = doCreate(context, metadata, beanName, marked);
-        Class<T> instanceType = getInstanceType();
+    public final <T> T create(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull Class<T> marked) {
+        Validation.is(validate(context, beanName, metadata, marked), "instance cannot be created.");
+        T instance = doCreate(context, beanName, metadata, marked);
         Validation.is(
-                instanceType.isInstance(instance),
+                marked.equals(instance.getClass()),
                 String.format(
-                        "instance '%s' must be an instance of instanceType '%s'.",
-                        instance, instanceType));
+                        "instance '%s' must be an instance of marked '%s'.", instance, marked));
         return instance;
+    }
+
+    @NotNull protected <T> T doProxy(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull T instance) {
+        return instance;
+    }
+
+    @NotNull @Override
+    public final <T> T proxy(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull T instance) {
+        Validation.notNull(context, "context must not be null.");
+        Validation.notNullOrBlank(beanName, "beanName must not be null or blank.");
+        Validation.notNull(metadata, "metadata must not be null.");
+        Validation.notNull(instance, "instance must not be null.");
+        return doProxy(context, beanName, metadata, instance);
     }
 }

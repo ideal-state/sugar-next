@@ -18,6 +18,8 @@ package team.idealstate.minecraft.next.common.validate;
 
 import java.util.Objects;
 import team.idealstate.minecraft.next.common.string.StringUtils;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 import team.idealstate.minecraft.next.common.validate.exception.ValidationException;
 
 public abstract class Validation {
@@ -50,7 +52,7 @@ public abstract class Validation {
         }
     }
 
-    public static <T> T requireNull(T object, String message) {
+    @Nullable public static <T> T requireNull(T object, String message) {
         isNull(object, message);
         return object;
     }
@@ -59,7 +61,7 @@ public abstract class Validation {
         is(Objects.isNull(object), message);
     }
 
-    public static <T> T requireNotNull(T object, String message) {
+    @NotNull public static <T> T requireNotNull(T object, String message) {
         notNull(object, message);
         return object;
     }
@@ -68,7 +70,7 @@ public abstract class Validation {
         is(Objects.nonNull(object), message);
     }
 
-    public static <T extends CharSequence> T requireBlank(T string, String message) {
+    @NotNull public static <T extends CharSequence> T requireBlank(T string, String message) {
         isBlank(string, message);
         return string;
     }
@@ -77,7 +79,7 @@ public abstract class Validation {
         is(StringUtils.isBlank(string), message);
     }
 
-    public static <T extends CharSequence> T requireNullOrBlank(T string, String message) {
+    @Nullable public static <T extends CharSequence> T requireNullOrBlank(T string, String message) {
         isNullOrBlank(string, message);
         return string;
     }

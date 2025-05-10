@@ -29,8 +29,15 @@ import team.idealstate.minecraft.next.common.context.Context;
 public @interface Configuration {
 
     /**
-     * @return 配置文件的 {@link java.net.URI}
+     * @return 配置文件的 {@link java.net.URI} 位置
      * @see Context#getResource(String)
      */
     String uri();
+
+    /**
+     * @return 配置文件的默认 {@link java.net.URI} 位置， 当 {@link #uri()} 不存在时释放（如果可以）默认配置文件到 {@link #uri()}
+     *     ， 为 "" 时表示不提供默认配置文件
+     * @see Context#getResource(String, ClassLoader)
+     */
+    String release() default "";
 }

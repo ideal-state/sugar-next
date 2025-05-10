@@ -17,8 +17,8 @@
 package team.idealstate.minecraft.next.common.logging;
 
 import java.util.function.Supplier;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public class Log4JLogger implements Logger {
 
@@ -41,9 +41,16 @@ public class Log4JLogger implements Logger {
     }
 
     @Override
-    public void println(Supplier<String> messageProvider) {
-        Level level = log.getLevel();
-        log.log(level, messageProvider.get());
+    public void println(@NotNull LogLevel level, @NotNull Supplier<String> messageProvider) {
+        int index = level.getIndex();
+        if (Log.getLevel().getIndex() > index) {
+            return;
+        }
+        if (index >= LogLevel.ERROR.getIndex()) {
+            log.error(messageProvider.get());
+        } else {
+            log.info(messageProvider.get());
+        }
     }
 
     @Override

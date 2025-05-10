@@ -16,20 +16,21 @@
 
 package team.idealstate.minecraft.next.common.logging;
 
+import lombok.Getter;
+
+@Getter
 public enum LogLevel {
-    UNKNOWN(0, ""),
-    TRACE(1, "§f"),
-    DEBUG(2, "§7"),
-    INFO(3, "§a"),
-    WARN(4, "§e"),
-    ERROR(5, "§c"),
-    FATAL(6, "§4");
+    UNKNOWN(0),
+    TRACE(1),
+    DEBUG(2),
+    INFO(3),
+    WARN(4),
+    ERROR(5),
+    FATAL(6);
 
-    public final int level;
-    public final String colorCode;
+    private final int index;
 
-    LogLevel(int level, String colorCode) {
-        this.level = level;
-        this.colorCode = colorCode;
+    LogLevel(int index) {
+        this.index = index;
     }
 }

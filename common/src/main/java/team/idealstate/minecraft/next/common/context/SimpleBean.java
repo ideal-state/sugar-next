@@ -17,54 +17,29 @@
 package team.idealstate.minecraft.next.common.context;
 
 import java.lang.annotation.Annotation;
-import team.idealstate.minecraft.next.common.function.Lazy;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NonNull;
+import team.idealstate.minecraft.next.common.context.annotation.feature.DependsOn;
+import team.idealstate.minecraft.next.common.function.closure.Provider;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-final class SimpleBean<M extends Annotation, T> implements Bean<M, T> {
+@Data
+final class SimpleBean<T> implements Bean<T> {
 
-    private final M metadata;
-    private final String name;
-    private final Lazy<T> lazy;
-    private final boolean initialized;
+    @NonNull private final String name;
+    private final DependsOn dependsOn;
+    @NonNull private final Class<? extends Annotation> metadataType;
+    @NonNull private final Annotation metadata;
+    @NonNull private final Class<T> marked;
 
-    SimpleBean(@NotNull M metadata, @NotNull String name, @NotNull T instance) {
-        Validation.notNull(metadata, "metadata must not be null.");
-        Validation.notNullOrBlank(name, "name must not be null.");
-        Validation.notNull(instance, "instance must not be null.");
-        this.metadata = metadata;
-        this.name = name;
-        this.lazy = Lazy.of(instance);
-        this.initialized = true;
-    }
-
-    SimpleBean(@NotNull M metadata, @NotNull String name, @NotNull Lazy<T> lazy) {
-        Validation.notNull(metadata, "metadata must not be null.");
-        Validation.notNullOrBlank(name, "name must not be null.");
-        Validation.notNull(lazy, "lazy must not be null.");
-        this.metadata = metadata;
-        this.name = name;
-        this.lazy = lazy;
-        this.initialized = false;
-    }
-
-    @NotNull
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @NotNull @Override
-    public M getMetadata() {
-        return metadata;
-    }
+    @NonNull @Getter(AccessLevel.PRIVATE)
+    private final Provider<T> provider;
 
     @Override
     @NotNull public T getInstance() {
-        return Validation.requireNotNull(lazy.get(), "instance must not be null.");
-    }
-
-    public boolean isInitialized() {
-        return initialized || lazy.isInitialized();
+        return Validation.requireNotNull(getProvider().provide(), "instance must not be null.");
     }
 }

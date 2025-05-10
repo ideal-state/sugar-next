@@ -34,11 +34,8 @@ import team.idealstate.minecraft.next.common.context.Bean;
 import team.idealstate.minecraft.next.common.context.Context;
 import team.idealstate.minecraft.next.common.context.ContextHolder;
 import team.idealstate.minecraft.next.common.context.ContextLifecycle;
-import team.idealstate.minecraft.next.common.context.annotation.component.Controller;
-import team.idealstate.minecraft.next.common.context.annotation.component.Subscriber;
 import team.idealstate.minecraft.next.common.eventbus.EventBus;
 import team.idealstate.minecraft.next.platform.spigot.api.command.SpigotCommand;
-import team.idealstate.minecraft.next.platform.spigot.api.context.factory.SpigotSubscriberBeanFactory;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholder;
 import team.idealstate.minecraft.next.platform.spigot.api.placeholder.SpigotPlaceholderExpansion;
 
@@ -67,7 +64,6 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     @Override
     public final void onLoad() {
         super.onLoad();
-        context.setBeanFactory(Subscriber.class, new SpigotSubscriberBeanFactory());
         context.load();
     }
 
@@ -75,10 +71,10 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
     public final void onEnable() {
         super.onEnable();
         context.enable();
-        registerCommands();
         PluginManager pluginManager = getServer().getPluginManager();
-        hookPlaceholderAPI(pluginManager);
         registerEventListeners(pluginManager);
+        registerCommands();
+        hookPlaceholderAPI(pluginManager);
     }
 
     @Override
@@ -88,19 +84,28 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
         context.destroy();
     }
 
-    private void registerCommands() {
-        List<Bean<Controller, Command>> beans = context.getBeans(Controller.class, Command.class);
+    private void registerEventListeners(PluginManager pluginManager) {
+        List<Bean<Listener>> beans = context.getBeans(Listener.class);
         if (beans.isEmpty()) {
             return;
         }
-        for (Bean<Controller, Command> bean : beans) {
+        for (Bean<Listener> bean : beans) {
+            pluginManager.registerEvents(bean.getInstance(), this);
+        }
+    }
+
+    private void registerCommands() {
+        List<Bean<Command>> beans = context.getBeans(Command.class);
+        if (beans.isEmpty()) {
+            return;
+        }
+        for (Bean<Command> bean : beans) {
             String name = bean.getName();
             PluginCommand pluginCommand = getCommand(name);
             if (pluginCommand == null) {
                 continue;
             }
-            Command instance = bean.getInstance();
-            SpigotCommand spigotCommand = SpigotCommand.of(name, instance);
+            SpigotCommand spigotCommand = SpigotCommand.of(name, bean.getInstance());
             pluginCommand.setExecutor(spigotCommand);
             pluginCommand.setTabCompleter(spigotCommand);
         }
@@ -118,30 +123,18 @@ public abstract class SpigotPlugin extends JavaPlugin implements ContextHolder, 
         @EventHandler(priority = EventPriority.LOWEST)
         public void onPlaceholderAPIEnabled(PluginEnableEvent event) {
             if (PLACEHOLDER_API.equals(event.getPlugin().getName())) {
-                List<Bean<Controller, Placeholder>> beans =
-                        context.getBeans(Controller.class, Placeholder.class);
+                List<Bean<Placeholder>> beans = context.getBeans(Placeholder.class);
                 if (beans.isEmpty()) {
                     return;
                 }
                 String author = context.getName();
                 String version = context.getVersion();
-                for (Bean<Controller, Placeholder> bean : beans) {
-                    Placeholder instance = bean.getInstance();
-                    SpigotPlaceholderExpansion.of(bean.getName(), author, version, instance)
+                for (Bean<Placeholder> bean : beans) {
+                    SpigotPlaceholderExpansion.of(
+                                    bean.getName(), author, version, bean.getInstance())
                             .register();
                 }
             }
-        }
-    }
-
-    private void registerEventListeners(PluginManager pluginManager) {
-        List<Bean<Subscriber, Listener>> beans = context.getBeans(Subscriber.class, Listener.class);
-        if (beans.isEmpty()) {
-            return;
-        }
-        for (Bean<Subscriber, Listener> bean : beans) {
-            Listener instance = bean.getInstance();
-            pluginManager.registerEvents(instance, this);
         }
     }
 }

@@ -78,6 +78,45 @@ public abstract class StringUtils {
         return !isNullOrBlank(charSequence);
     }
 
+    public static boolean isChar(CharSequence charSequence) {
+        if (isNullOrBlank(charSequence)) {
+            return false;
+        }
+        assert charSequence != null;
+        return charSequence.length() == 1;
+    }
+
+    public static boolean isNotChar(CharSequence charSequence) {
+        return !isChar(charSequence);
+    }
+
+    public static boolean isBoolean(CharSequence charSequence) {
+        if (isNullOrBlank(charSequence)) {
+            return false;
+        }
+        int length = charSequence.length();
+        switch (charSequence.charAt(0)) {
+            case 't':
+            case 'T':
+                if (length != 4) {
+                    return false;
+                }
+                return Boolean.TRUE.toString().equalsIgnoreCase(charSequence.toString());
+            case 'f':
+            case 'F':
+                if (length != 5) {
+                    return false;
+                }
+                return Boolean.FALSE.toString().equalsIgnoreCase(charSequence.toString());
+            default:
+                return false;
+        }
+    }
+
+    public static boolean isNotBoolean(CharSequence charSequence) {
+        return !isBoolean(charSequence);
+    }
+
     @SuppressWarnings("DuplicatedCode")
     public static boolean isNumeric(CharSequence charSequence) {
         if (isNullOrBlank(charSequence)) {
@@ -148,6 +187,14 @@ public abstract class StringUtils {
 
     public static boolean isNotInteger(CharSequence charSequence) {
         return !isInteger(charSequence);
+    }
+
+    public static boolean isDecimal(CharSequence charSequence) {
+        return isNumeric(charSequence) && countMatches(charSequence, '.') == 1;
+    }
+
+    public static boolean isNotDecimal(CharSequence charSequence) {
+        return !isDecimal(charSequence);
     }
 
     public static int countMatches(CharSequence charSequence, char matched) {

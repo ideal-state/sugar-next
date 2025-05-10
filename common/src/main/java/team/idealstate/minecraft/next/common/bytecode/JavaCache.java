@@ -27,7 +27,7 @@ import java.util.jar.JarFile;
 import team.idealstate.minecraft.next.common.bytecode.api.member.JavaClass;
 import team.idealstate.minecraft.next.common.bytecode.exception.BytecodeParsingException;
 import team.idealstate.minecraft.next.common.function.Functional;
-import team.idealstate.minecraft.next.common.io.InputUtils;
+import team.idealstate.minecraft.next.common.io.IOUtils;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
@@ -112,7 +112,9 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
                                     Functional.functional(jar.getInputStream(entry))
                                             .use(
                                                     input -> {
-                                                        classFile.set(InputUtils.readStream(input));
+                                                        classFile.set(
+                                                                IOUtils.readAllBytes(
+                                                                        input));
                                                     });
                                 });
                 if (classFile.get() != null) {

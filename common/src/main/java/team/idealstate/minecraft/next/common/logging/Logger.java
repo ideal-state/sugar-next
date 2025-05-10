@@ -19,21 +19,22 @@ package team.idealstate.minecraft.next.common.logging;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.function.Supplier;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public interface Logger {
 
-    void println(Supplier<String> messageProvider);
+    void println(@NotNull LogLevel level, @NotNull Supplier<String> messageProvider);
 
-    default void println(String message) {
-        println(() -> message);
+    default void println(@NotNull LogLevel level, String message) {
+        println(level, () -> message);
     }
 
     default void trace(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.TRACE;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void trace(String message) {
@@ -42,10 +43,10 @@ public interface Logger {
 
     default void debug(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.DEBUG;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void debug(String message) {
@@ -54,10 +55,10 @@ public interface Logger {
 
     default void info(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.INFO;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void info(String message) {
@@ -66,10 +67,10 @@ public interface Logger {
 
     default void warn(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.WARN;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void warn(String message) {
@@ -78,10 +79,10 @@ public interface Logger {
 
     default void error(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.ERROR;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void error(String message) {
@@ -90,7 +91,7 @@ public interface Logger {
 
     default void error(Throwable throwable) {
         LogLevel level = LogLevel.ERROR;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
 
@@ -99,15 +100,15 @@ public interface Logger {
             throwable.printStackTrace(it);
         }
         String message = throwable.getMessage();
-        println(level.colorCode + message + "\n" + stackTrace);
+        println(level, message + "\n" + stackTrace);
     }
 
     default void fatal(Supplier<String> messageProvider) {
         LogLevel level = LogLevel.FATAL;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
-        println(level.colorCode + messageProvider.get());
+        println(level, messageProvider.get());
     }
 
     default void fatal(String message) {
@@ -116,7 +117,7 @@ public interface Logger {
 
     default void fatal(Throwable throwable) {
         LogLevel level = LogLevel.FATAL;
-        if (Log.getLevel().level > level.level) {
+        if (Log.getLevel().getIndex() > level.getIndex()) {
             return;
         }
         StringWriter stackTrace = new StringWriter(1024);
@@ -124,6 +125,6 @@ public interface Logger {
             throwable.printStackTrace(it);
         }
         String message = throwable.getMessage();
-        println(level.colorCode + message + "\n" + stackTrace);
+        println(level, message + "\n" + stackTrace);
     }
 }

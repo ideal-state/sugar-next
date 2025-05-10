@@ -41,7 +41,7 @@ import team.idealstate.minecraft.next.platform.spigot.api.placeholder.Placeholde
 @Named("minecraftnext")
 @Controller
 @Environment("development")
-public final class ExampleController implements ContextHolderAware, Command, Placeholder {
+public class ExampleController implements ContextHolderAware, Command, Placeholder {
 
     @CommandHandler
     public CommandResult show() {

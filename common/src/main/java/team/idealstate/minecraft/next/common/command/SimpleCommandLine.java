@@ -39,7 +39,7 @@ import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
 import team.idealstate.minecraft.next.common.command.annotation.CommandHandler;
 import team.idealstate.minecraft.next.common.command.exception.CommandArgumentConversionException;
 import team.idealstate.minecraft.next.common.command.exception.CommandException;
-import team.idealstate.minecraft.next.common.function.data.Pair;
+import team.idealstate.minecraft.next.common.databind.Pair;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 

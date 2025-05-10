@@ -19,12 +19,24 @@ package team.idealstate.minecraft.next.platform.spigot.api;
 import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.command.ConsoleCommandSender;
+import team.idealstate.minecraft.next.common.logging.Log;
+import team.idealstate.minecraft.next.common.logging.LogLevel;
 import team.idealstate.minecraft.next.common.logging.Logger;
+import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
 public class SpigotLogger implements Logger {
+
     @Override
-    public void println(Supplier<String> messageProvider) {
+    public void println(@NotNull LogLevel level, @NotNull Supplier<String> messageProvider) {
+        int index = level.getIndex();
+        if (Log.getLevel().getIndex() > index) {
+            return;
+        }
         ConsoleCommandSender console = Bukkit.getConsoleSender();
-        console.sendMessage(messageProvider.get());
+        if (index >= LogLevel.ERROR.getIndex()) {
+            console.sendMessage("§4" + messageProvider.get());
+        } else {
+            console.sendMessage(messageProvider.get());
+        }
     }
 }

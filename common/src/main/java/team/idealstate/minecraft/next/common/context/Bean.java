@@ -17,13 +17,27 @@
 package team.idealstate.minecraft.next.common.context;
 
 import java.lang.annotation.Annotation;
+import team.idealstate.minecraft.next.common.context.annotation.feature.DependsOn;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 
-public interface Bean<M extends Annotation, T> {
+public interface Bean<T> {
 
     @NotNull String getName();
 
-    @NotNull M getMetadata();
+    @Nullable DependsOn getDependsOn();
+
+    /**
+     * @return 注意：此值不一定满足 <code>equals({@link #getMetadata()}.annotationType())<code/>
+     */
+    @NotNull Class<? extends Annotation> getMetadataType();
+
+    /**
+     * @return 注意：此值不一定满足 <code>annotationType().equals({@link #getMetadataType()})<code/>
+     */
+    @NotNull Annotation getMetadata();
+
+    @NotNull Class<T> getMarked();
 
     @NotNull T getInstance();
 }

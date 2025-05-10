@@ -18,14 +18,16 @@ package team.idealstate.minecraft.next.common.function;
 
 import java.io.Closeable;
 import java.util.Objects;
+import team.idealstate.minecraft.next.common.databind.Pair;
+import team.idealstate.minecraft.next.common.databind.Property;
 import team.idealstate.minecraft.next.common.function.closure.Action;
 import team.idealstate.minecraft.next.common.function.closure.Condition;
 import team.idealstate.minecraft.next.common.function.closure.Function;
 import team.idealstate.minecraft.next.common.function.closure.Provider;
-import team.idealstate.minecraft.next.common.function.data.Pair;
 import team.idealstate.minecraft.next.common.function.exception.FunctionExecutionException;
 import team.idealstate.minecraft.next.common.validate.Validation;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
+import team.idealstate.minecraft.next.common.validate.annotation.Nullable;
 
 public interface Functional<T> {
 
@@ -48,6 +50,10 @@ public interface Functional<T> {
 
     @NotNull static <F, S> Pair<F, S> pair(F first, S second) {
         return Pair.of(first, second);
+    }
+
+    @NotNull static <V> Property<V> property(@NotNull String key, @Nullable V value) {
+        return Property.of(key, value);
     }
 
     T it();

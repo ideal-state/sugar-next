@@ -25,7 +25,7 @@ import team.idealstate.minecraft.next.common.logging.Log;
 
 @Subscriber
 @Environment("development")
-public final class ExampleSubscriber implements Listener {
+public class ExampleSubscriber implements Listener {
 
     @EventHandler
     public void onCommand(ServerCommandEvent event) {

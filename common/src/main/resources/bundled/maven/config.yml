@@ -1,0 +1,13 @@
+# maven 仓库地址 次序由上到下
+# 最前默认是本地仓库（file://该配置所在目录/libraries/）
+
+##############################
+#         自定义仓库           #
+##############################
+repositories:
+  aliyun:
+    url: https://maven.aliyun.com/repository/public/
+  sonatype-snapshots:
+    url: https://central.sonatype.com/repository/maven-snapshots/
+  maven-central:
+    url: https://repo1.maven.org/maven2/

@@ -18,6 +18,7 @@ package team.idealstate.minecraft.next.common.logging;
 
 import java.util.function.Supplier;
 import team.idealstate.minecraft.next.common.service.ServiceLoader;
+import team.idealstate.minecraft.next.common.stacktrace.StackTraceUtils;
 import team.idealstate.minecraft.next.common.validate.Validation;
 
 public abstract class Log {
@@ -43,26 +44,40 @@ public abstract class Log {
         if (GLOBAL == null) {
             synchronized (Log.class) {
                 if (GLOBAL == null) {
-                    GLOBAL =
-                            ServiceLoader.singleton(
-                                    Logger.class,
-                                    Logger.class.getClassLoader(),
-                                    () -> {
-                                        Logger logger = null;
-                                        try {
-                                            logger = Log4JLogger.instance();
-                                        } catch (NoClassDefFoundError ignored) {
-                                        }
-                                        try {
-                                            logger = Slf4JLogger.instance();
-                                        } catch (NoClassDefFoundError ignored) {
-                                        }
-                                        if (logger == null) {
-                                            throw new IllegalStateException(
-                                                    "No logger implementation found.");
-                                        }
-                                        return logger;
-                                    });
+                    try {
+                        //                        GLOBAL =
+                        //                                ServiceLoader.singleton(
+                        //                                        Logger.class,
+                        //                                        Logger.class.getClassLoader(),
+                        //                                        () -> {
+                        //                                            Logger logger = null;
+                        //                                            try {
+                        //                                                logger =
+                        // Log4JLogger.instance();
+                        //                                            } catch (NoClassDefFoundError
+                        // ignored) {
+                        //                                            }
+                        //                                            try {
+                        //                                                logger =
+                        // Slf4JLogger.instance();
+                        //                                            } catch (NoClassDefFoundError
+                        // ignored) {
+                        //                                            }
+                        //                                            if (logger == null) {
+                        //                                                return
+                        // SystemLogger.instance();
+                        //                                            }
+                        //                                            return logger;
+                        //                                        });
+                        GLOBAL =
+                                ServiceLoader.singleton(
+                                        Logger.class,
+                                        Logger.class.getClassLoader(),
+                                        SystemLogger::instance);
+                    } catch (NoClassDefFoundError e) {
+                        System.err.println(StackTraceUtils.makeDetails(e));
+                        GLOBAL = SystemLogger.instance();
+                    }
                 }
             }
         }
@@ -77,20 +92,20 @@ public abstract class Log {
         LEVEL = Validation.requireNotNull(level, "Log level cannot be null.");
     }
 
-    public static void println(Supplier<String> messageProvider) {
-        println(getLogger(), messageProvider);
+    public static void println(LogLevel level, Supplier<String> messageProvider) {
+        println(getLogger(), level, messageProvider);
     }
 
-    public static void println(Logger logger, Supplier<String> messageProvider) {
-        logger.println(messageProvider);
+    public static void println(Logger logger, LogLevel level, Supplier<String> messageProvider) {
+        logger.println(level, messageProvider);
     }
 
-    public static void println(String message) {
-        println(getLogger(), message);
+    public static void println(LogLevel level, String message) {
+        println(getLogger(), level, message);
     }
 
-    public static void println(Logger logger, String message) {
-        logger.println(message);
+    public static void println(Logger logger, LogLevel level, String message) {
+        logger.println(level, message);
     }
 
     public static void trace(Supplier<String> messageProvider) {

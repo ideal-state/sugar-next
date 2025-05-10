@@ -19,6 +19,7 @@ package team.idealstate.minecraft.next.common.command.example;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import team.idealstate.minecraft.next.common.command.Command;
 import team.idealstate.minecraft.next.common.command.CommandContext;
 import team.idealstate.minecraft.next.common.command.CommandResult;
 import team.idealstate.minecraft.next.common.command.annotation.CommandArgument;
@@ -28,7 +29,7 @@ import team.idealstate.minecraft.next.common.command.exception.CommandArgumentCo
 import team.idealstate.minecraft.next.common.string.StringUtils;
 import team.idealstate.minecraft.next.common.validate.annotation.NotNull;
 
-public final class ExampleCommand {
+public final class ExampleCommand implements Command {
 
     private final List<String> ids = Arrays.asList("aaa", "bbb");
 
