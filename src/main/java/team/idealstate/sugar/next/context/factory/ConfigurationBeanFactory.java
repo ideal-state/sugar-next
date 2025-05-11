@@ -17,15 +17,21 @@
 package team.idealstate.sugar.next.context.factory;
 
 import static team.idealstate.sugar.next.function.Functional.functional;
+import static team.idealstate.sugar.next.function.Functional.lazy;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import team.idealstate.sugar.internal.org.yaml.snakeyaml.Yaml;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.core.JsonFactory;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.ObjectMapper;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.context.Context;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
@@ -39,7 +45,11 @@ import team.idealstate.sugar.validate.annotation.Nullable;
 
 public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration> {
 
-    private final Lazy<Yaml> lazy = Lazy.of(Yaml::new);
+    public static final Set<String> SUPPORTED_FILE_EXTENSIONS =
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(".yml", ".yaml", ".json")));
+
+    private final Lazy<ObjectMapper> yaml = lazy(() -> new ObjectMapper(new YAMLFactory()).findAndRegisterModules());
+    private final Lazy<ObjectMapper> json = lazy(() -> new ObjectMapper(new JsonFactory()).findAndRegisterModules());
 
     public ConfigurationBeanFactory() {
         super(Configuration.class);
@@ -60,7 +70,19 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                     getMetadataType().getSimpleName(), uri, e.getMessage()));
             return false;
         }
+        if (!SUPPORTED_FILE_EXTENSIONS.contains(uri.substring(uri.lastIndexOf('.')))) {
+            Log.warn(String.format(
+                    "%s: Invalid configuration extension '%s'.",
+                    getMetadataType().getSimpleName(), uri));
+            return false;
+        }
         String release = metadata.release().replace("\\", "/");
+        if (!SUPPORTED_FILE_EXTENSIONS.contains(release.substring(release.lastIndexOf('.')))) {
+            Log.warn(String.format(
+                    "%s: Invalid configuration extension '%s'.",
+                    getMetadataType().getSimpleName(), release));
+            return false;
+        }
         File file;
         try {
             if (!StringUtils.isNullOrBlank(release) && (file = getFile(context, uri)) != null && !file.exists()) {
@@ -99,6 +121,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
         try {
             ClassLoader markedClassLoader = marked.getClassLoader();
             String uri = metadata.uri().replace("\\", "/");
+            String extension;
             Validation.is(
                     uri.charAt(uri.length() - 1) != '/',
                     String.format(
@@ -131,15 +154,25 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                     Files.write(file.toPath(), IOUtils.readAllBytes(resource));
                     resource = Files.newInputStream(file.toPath());
                 }
+                extension = release.substring(release.lastIndexOf('.'));
             } else {
                 Validation.notNull(
                         resource,
                         String.format(
                                 "%s: Resource '%s' not found.",
                                 getMetadataType().getSimpleName(), uri));
+                extension = uri.substring(uri.lastIndexOf('.'));
             }
-            return (T) functional(resource).convert(InputStreamReader::new).use(Object.class, reader -> lazy.get()
-                    .loadAs(reader, marked));
+            return (T) functional(resource).use(Object.class, input -> {
+                if (extension.equals(".yml") || extension.equals(".yaml")) {
+                    return yaml.get().readValue(input, marked);
+                } else if (extension.equals(".json")) {
+                    return json.get().readValue(input, marked);
+                }
+                throw new ContextException(String.format(
+                        "%s: Unsupported file configuration extension '%s'.",
+                        getMetadataType().getSimpleName(), extension));
+            });
         } catch (IOException e) {
             throw new ContextException(e);
         }
