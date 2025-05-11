@@ -34,7 +34,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +50,6 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.jar.JarEntry;
@@ -128,7 +126,7 @@ final class SimpleContext implements Context {
     private volatile int status = STATUS_DESTROYED;
     private final Lock lock = new ReentrantLock();
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
-    private static final long TIMEOUT = 100L;
+    private static final long TIMEOUT = 1000L;
 
     private <R> R mustDependOn(
             int depend, boolean allowTimeout, boolean next, R def, Function<SimpleContext, R> function) {
@@ -462,7 +460,7 @@ final class SimpleContext implements Context {
                     }
                 }
             }
-            return null;
+            return (Bean<T>) bean;
         });
     }
 
@@ -632,11 +630,11 @@ final class SimpleContext implements Context {
                         value = autowireValue.get(0).getInstance();
                     }
                 }
-                if (parameter.getAnnotation(NotNull.class) != null) {
+                if (parameter.isAnnotationPresent(NotNull.class)) {
                     Validation.notNull(
                             value,
                             String.format(
-                                    "Autowire: '%s' method '%s' parameter '%s' value must not be" + " null.",
+                                    "Autowire: '%s' method '%s' parameter '%s' value must not be null.",
                                     instanceTypeName, methodName, parameterName));
                 }
                 parameterValues[i] = value;
@@ -783,219 +781,159 @@ final class SimpleContext implements Context {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doLoad() throws Throwable {
-        Class<? extends ContextHolder> owner = contextHolder.getClass();
+        ContextHolder holder = getHolder();
+        Class<? extends ContextHolder> owner = holder.getClass();
         Banner.lines(owner).forEach(Log::info);
         Log.info(String.format("Environment: '%s'", getEnvironment()));
         Bundled.release(owner, getDataFolder());
-        if (beanFactories.isEmpty()) {
-            return;
-        }
-        URL location = owner.getProtectionDomain().getCodeSource().getLocation();
-        File file = Paths.get(location.toURI()).toFile();
-        String ownerName = owner.getName().replace('.', '/');
-        String ownerPackage = owner.getPackage().getName().replace('.', '/');
-        Set<String> scanPackages = new HashSet<>();
-        scanPackages.add(ownerPackage);
-        List<Annotation> ownerAnnotations = getContextHolderAnnotations();
-        for (Annotation ownerAnnotation : ownerAnnotations) {
-            if (ownerAnnotation instanceof Scan) {
-                Scan scan = (Scan) ownerAnnotation;
-                String[] value = scan.value();
-                if (value.length != 0) {
-                    scanPackages.addAll(Arrays.stream(value)
-                            .map(s -> s.replace('\\', '/').replace('.', '/'))
-                            .collect(Collectors.toList()));
-                }
-            } else if (ownerAnnotation instanceof RegisterFactory) {
-                RegisterFactory registerFactory = (RegisterFactory) ownerAnnotation;
-                registerBeanFactory(
-                        registerFactory.metadata(),
-                        registerFactory.beanFactory().getConstructor().newInstance());
-            } else if (ownerAnnotation instanceof RegisterProperty) {
-                RegisterProperty registerProperty = (RegisterProperty) ownerAnnotation;
-                registerProperty(registerProperty.key(), registerProperty.value());
-            } else if (ownerAnnotation instanceof RegisterFactories) {
-                RegisterFactories registerFactories = (RegisterFactories) ownerAnnotation;
-                for (RegisterFactory registerFactory : registerFactories.value()) {
-                    registerBeanFactory(
-                            registerFactory.metadata(),
-                            registerFactory.beanFactory().getConstructor().newInstance());
-                }
-            } else if (ownerAnnotation instanceof RegisterProperties) {
-                RegisterProperties registerProperties = (RegisterProperties) ownerAnnotation;
-                for (RegisterProperty registerProperty : registerProperties.value()) {
-                    registerProperty(registerProperty.key(), registerProperty.value());
-                }
-            }
-        }
-        List<String> classNames = new LinkedList<>();
+        Set<String> scanPackages = loadBoots(holder);
+        Set<File> bootFiles = loadBootFiles(holder);
         long[] start = {System.currentTimeMillis()};
         Log.debug(() -> String.format(
-                "scanning package ...\n%s",
+                "Scanning packages...\n%s",
                 functional(new StringJoiner("\n", "[\n", "\n]"))
                         .apply(it -> scanPackages.forEach(it::add))
                         .it()));
-        functional(new JarFile(file)).use(jar -> {
-            Enumeration<JarEntry> entries = jar.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                if (entry.isDirectory()) {
-                    continue;
-                }
-                String entryName = entry.getName();
-                if (!entryName.endsWith(".class") || scanPackages.stream().noneMatch(entryName::startsWith)) {
-                    continue;
-                }
-                String className =
-                        entryName.substring(0, entryName.length() - 6).replace('\\', '/');
-                if (className.equals(ownerName)) {
-                    continue;
-                }
-                AtomicBoolean isClass = new AtomicBoolean(false);
-                functional(jar.getInputStream(entry)).use(input -> {
-                    ClassReader classReader = new ClassReader(input);
-                    isClass.set(className.equals(classReader.getClassName()));
-                });
-                if (!isClass.get()) {
-                    continue;
-                }
-                classNames.add(entryName);
-            }
-        });
-        if (classNames.isEmpty()) {
-            Log.debug(() -> String.format(
-                    "(%s ms) scanning package '%s' done.", System.currentTimeMillis() - start[0], ownerPackage));
-            return;
-        }
-        JavaCache javaCache = new JavaCache(file, classNames.size(), 0.75f);
         ClassLoader ownerClassLoader = owner.getClassLoader();
-        Map<String, DependsOn> dependOnMap = new LinkedHashMap<>(classNames.size(), 0.75f);
-        Set<String> inDependOnDone = new LinkedHashSet<>();
-        Log.info("register beans ...");
-        COLLECTION:
-        for (String className : classNames) {
-            JavaClass javaClass = Java.typeof(className, javaCache, ownerClassLoader);
-            JavaAnnotation[] javaAnnotations = javaClass.getAnnotations();
-            Set<JavaAnnotation> maybeMetadataAnnotations = Collections.emptySet();
-            COLLECTION_METADATA:
-            for (JavaAnnotation javaAnnotation : javaAnnotations) {
-                JavaClass annotationType;
-                try {
-                    annotationType = javaAnnotation.getAnnotationType();
-                } catch (BytecodeParsingException e) {
-                    if (e.getCause() instanceof ClassNotFoundException) {
-                        continue;
+        Map<String, DependsOn> dependOnMap = new LinkedHashMap<>(bootFiles.size() * 64);
+        Set<String> inDependOnDone = new LinkedHashSet<>(bootFiles.size() * 64);
+        Set<String> duplicate = new HashSet<>(bootFiles.size() * 64);
+        Log.info("Register beans ...");
+        for (File bootFile : bootFiles) {
+            Set<String> classes = loadBootClasses(holder, bootFile, scanPackages);
+            if (classes.isEmpty()) {
+                continue;
+            }
+            JavaCache javaCache = new JavaCache(bootFile, classes.size());
+            COLLECTION:
+            for (String className : classes) {
+                Log.debug(() -> String.format("Class name: %s", className));
+                JavaClass javaClass = Java.typeof(className, javaCache, ownerClassLoader);
+                JavaAnnotation[] javaAnnotations = javaClass.getAnnotations();
+                Set<JavaAnnotation> maybeMetadataAnnotations = Collections.emptySet();
+                COLLECTION_METADATA:
+                for (JavaAnnotation javaAnnotation : javaAnnotations) {
+                    JavaClass annotationType;
+                    try {
+                        annotationType = javaAnnotation.getAnnotationType();
+                    } catch (BytecodeParsingException e) {
+                        if (e.getCause() instanceof ClassNotFoundException) {
+                            continue;
+                        }
+                        throw e;
                     }
-                    throw e;
-                }
-                for (Class<? extends Annotation> metadataType : beanFactories.keySet()) {
-                    if (metadataType.getName().equals(annotationType.getName())) {
+                    for (Class<? extends Annotation> metadataType : beanFactories.keySet()) {
+                        if (metadataType.getName().equals(annotationType.getName())) {
+                            if (maybeMetadataAnnotations.isEmpty()) {
+                                maybeMetadataAnnotations = new LinkedHashSet<>(javaAnnotations.length);
+                            }
+                            maybeMetadataAnnotations.add(javaAnnotation);
+                            continue COLLECTION_METADATA;
+                        }
+                    }
+                    if (maybeComponentAnnotation(javaAnnotation)) {
                         if (maybeMetadataAnnotations.isEmpty()) {
                             maybeMetadataAnnotations = new LinkedHashSet<>(javaAnnotations.length);
                         }
                         maybeMetadataAnnotations.add(javaAnnotation);
-                        continue COLLECTION_METADATA;
                     }
                 }
-                if (maybeComponentAnnotation(javaAnnotation)) {
-                    if (maybeMetadataAnnotations.isEmpty()) {
-                        maybeMetadataAnnotations = new LinkedHashSet<>(javaAnnotations.length);
-                    }
-                    maybeMetadataAnnotations.add(javaAnnotation);
-                }
-            }
-            if (maybeMetadataAnnotations.isEmpty()) {
-                continue;
-            }
-            Validation.is(
-                    maybeMetadataAnnotations.size() == 1,
-                    String.format(
-                            "class '%s' has multiple annotations of metadata type. %s",
-                            className, maybeMetadataAnnotations));
-            JavaAnnotation maybeComponentAnnotation =
-                    maybeMetadataAnnotations.stream().findFirst().get();
-            Class<? extends Annotation> metadataType =
-                    maybeComponentAnnotation.getAnnotationType().java(ownerClassLoader);
-            BeanFactory beanFactory = getBeanFactory(metadataType);
-            if (beanFactory == null) {
-                Log.debug(String.format("no bean factory for metadata '%s', skip", metadataType));
-                continue;
-            }
-            Class<?> marked = javaClass.java(ownerClassLoader);
-            Annotation metadata;
-            if (metadataType.equals(beanFactory.getMetadataType())) {
-                metadata = marked.getDeclaredAnnotation(metadataType);
-            } else if (Component.class.equals(beanFactory.getMetadataType())) {
-                metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
-            } else {
-                throw new UnsupportedOperationException(String.format(
-                        "unsupported metadata type '%s' for bean factory '%s'.", metadataType, beanFactory));
-            }
-            if (metadata == null) {
-                throw new IllegalStateException(
-                        String.format("class '%s' metadata '%s' is invisible.", className, metadataType));
-            }
-            Environment environment = marked.getAnnotation(Environment.class);
-            if (environment != null) {
-                String env = environment.value();
-                if (!StringUtils.isEmpty(env) && !getEnvironment().equals(env)) {
+                if (maybeMetadataAnnotations.isEmpty()) {
                     continue;
                 }
-            }
-            Named named = marked.getAnnotation(Named.class);
-            String beanName;
-            if (named == null || StringUtils.isNullOrBlank(named.value())) {
-                beanName = marked.getName();
-            } else {
-                beanName = named.value();
-            }
-            if (nameMap.containsKey(beanName)) {
-                throw new IllegalStateException(String.format("bean name '%s' is duplicated.", beanName));
-            }
-            DependsOn dependsOn = marked.getAnnotation(DependsOn.class);
-            ClassLoader markedClassLoader = marked.getClassLoader();
-            if (dependsOn != null) {
-                for (String dependClassName : dependsOn.classes()) {
-                    try {
-                        Class.forName(dependClassName, false, markedClassLoader);
-                    } catch (ClassNotFoundException e) {
-                        Log.debug(() -> String.format("cannot found depend class '%s', skip.", dependClassName));
-                        continue COLLECTION;
+                Validation.is(
+                        maybeMetadataAnnotations.size() == 1,
+                        String.format(
+                                "Class '%s' has multiple annotations of metadata type. %s",
+                                className, maybeMetadataAnnotations));
+                JavaAnnotation maybeComponentAnnotation =
+                        maybeMetadataAnnotations.stream().findFirst().get();
+                Class<? extends Annotation> metadataType =
+                        maybeComponentAnnotation.getAnnotationType().java(ownerClassLoader);
+                BeanFactory beanFactory = getBeanFactory(metadataType);
+                if (beanFactory == null) {
+                    Log.debug(String.format("No bean factory for metadata '%s', skip", metadataType));
+                    continue;
+                }
+                Class<?> marked = javaClass.java(ownerClassLoader);
+                Annotation metadata;
+                if (metadataType.equals(beanFactory.getMetadataType())) {
+                    metadata = marked.getDeclaredAnnotation(metadataType);
+                } else if (Component.class.equals(beanFactory.getMetadataType())) {
+                    metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
+                } else {
+                    throw new UnsupportedOperationException(String.format(
+                            "Unsupported metadata type '%s' for bean factory '%s'.", metadataType, beanFactory));
+                }
+                if (metadata == null) {
+                    throw new IllegalStateException(
+                            String.format("Class '%s' metadata '%s' is invisible.", className, metadataType));
+                }
+                if (!duplicate.add(className)) {
+                    throw new IllegalStateException(String.format("Duplicate class name: '%s'", className));
+                }
+                Environment environment = marked.getAnnotation(Environment.class);
+                if (environment != null) {
+                    String env = environment.value();
+                    if (!StringUtils.isEmpty(env) && !getEnvironment().equals(env)) {
+                        continue;
                     }
                 }
-                for (DependsOn.Property property : dependsOn.properties()) {
-                    ContextProperty contextProperty = getProperty(property.key());
-                    if (contextProperty == null
-                            || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
-                        Log.debug(() -> String.format(
-                                "depend property '%s' is not set or not equal to" + " '%s', skip.",
-                                property.key(), property.value()));
-                        continue COLLECTION;
+                Named named = marked.getAnnotation(Named.class);
+                String beanName;
+                if (named == null || StringUtils.isNullOrBlank(named.value())) {
+                    beanName = marked.getName();
+                } else {
+                    beanName = named.value();
+                }
+                if (nameMap.containsKey(beanName)) {
+                    throw new IllegalStateException(String.format("Bean name '%s' is duplicated.", beanName));
+                }
+                DependsOn dependsOn = marked.getAnnotation(DependsOn.class);
+                ClassLoader markedClassLoader = marked.getClassLoader();
+                if (dependsOn != null) {
+                    for (String dependClassName : dependsOn.classes()) {
+                        try {
+                            Class.forName(dependClassName, false, markedClassLoader);
+                        } catch (ClassNotFoundException e) {
+                            Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
+                            continue COLLECTION;
+                        }
+                    }
+                    for (DependsOn.Property property : dependsOn.properties()) {
+                        ContextProperty contextProperty = getProperty(property.key());
+                        if (contextProperty == null
+                                || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
+                            Log.debug(() -> String.format(
+                                    "Depend property '%s' is not set or not equal to" + " '%s', skip.",
+                                    property.key(), property.value()));
+                            continue COLLECTION;
+                        }
                     }
                 }
+                if (!beanFactory.validate(this, beanName, metadata, marked)) {
+                    Log.warn(String.format("Bean factory '%s' rejects bean '%s'.", beanFactory.getClass(), marked));
+                    continue;
+                }
+                Provider<Object> provider;
+                if (marked.isAnnotationPresent(Prototype.class)) {
+                    provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, marked);
+                } else {
+                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, marked));
+                }
+                SimpleBean<?> bean =
+                        new SimpleBean<>(beanName, dependsOn, metadataType, metadata, (Class) marked, provider);
+                nameMap.put(beanName, bean);
+                markedMap.put(marked, bean);
+                if (dependsOn != null) {
+                    dependOnMap.put(beanName, dependsOn);
+                } else {
+                    inDependOnDone.add(beanName);
+                }
+                Log.info(String.format("%s: '%s'.", metadataType.getSimpleName(), beanName));
             }
-            if (!beanFactory.validate(this, beanName, metadata, marked)) {
-                Log.warn(String.format("bean factory '%s' rejects bean '%s'.", beanFactory.getClass(), marked));
-                continue;
-            }
-            Provider<Object> provider;
-            if (marked.isAnnotationPresent(Prototype.class)) {
-                provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, marked);
-            } else {
-                provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, marked));
-            }
-            SimpleBean<?> bean =
-                    new SimpleBean<>(beanName, dependsOn, metadataType, metadata, (Class) marked, provider);
-            nameMap.put(beanName, bean);
-            markedMap.put(marked, bean);
-            if (dependsOn != null) {
-                dependOnMap.put(beanName, dependsOn);
-            } else {
-                inDependOnDone.add(beanName);
-            }
-            Log.info(String.format("%s: '%s'.", metadataType.getSimpleName(), beanName));
         }
-        Log.info("register beans done.");
+        Log.info("Register beans done.");
         if (!dependOnMap.isEmpty()) {
             for (String beanName : dependOnMap.keySet()) {
                 resolveDependsOnMap(beanName, dependOnMap, inDependOnDone, new LinkedHashSet<>(dependOnMap.size()));
@@ -1005,13 +943,13 @@ final class SimpleContext implements Context {
                 for (Map.Entry<String, DependsOn> entry : dependOnMap.entrySet()) {
                     String beanName = entry.getKey();
                     DependsOn dependsOn = entry.getValue();
-                    Log.debug(() -> String.format("bean '%s' dependsOn: '%s'", beanName, dependsOn));
+                    Log.debug(() -> String.format("Bean '%s' dependsOn: '%s'", beanName, dependsOn));
                     markedMap.remove(nameMap.remove(beanName).getMarked());
-                    Log.warn(() -> String.format("bean '%s' dependsOn is not resolved, skip.", beanName));
+                    Log.warn(() -> String.format("Bean '%s' dependsOn is not resolved, skip.", beanName));
                 }
             }
         }
-        Log.debug(() -> String.format("(%s ms) scanning package done.", System.currentTimeMillis() - start[0]));
+        Log.debug(() -> String.format("(%s ms) Scanning package done.", System.currentTimeMillis() - start[0]));
     }
 
     private void resolveDependsOnMap(
@@ -1028,7 +966,7 @@ final class SimpleContext implements Context {
         }
         if (!inDependOnProgress.add(beanName)) {
             throw new IllegalStateException(
-                    String.format("(circular) bean '%s' is in dependsOn progress. %s", beanName, inDependOnProgress));
+                    String.format("(Circular) Bean '%s' is in dependsOn progress. %s", beanName, inDependOnProgress));
         }
         for (String dependBeanName : dependsOn.beans()) {
             if (inDependOnDone.contains(dependBeanName)) {
@@ -1072,7 +1010,7 @@ final class SimpleContext implements Context {
                 }
             }
             if (count > 0) {
-                throw new IllegalStateException("failed to destroy " + count + " instances.");
+                throw new IllegalStateException("Failed to destroy " + count + " instances.");
             }
         } finally {
             properties.clear();
@@ -1119,7 +1057,7 @@ final class SimpleContext implements Context {
     }
 
     private static boolean isComponentAnnotation(@NotNull Class<?> annotationType) {
-        Validation.notNull(annotationType, "annotationType must not be null.");
+        Validation.notNull(annotationType, "Annotation type must not be null.");
         if (!annotationType.isAnnotation()) {
             return false;
         }
@@ -1130,7 +1068,7 @@ final class SimpleContext implements Context {
     }
 
     @NotNull
-    private List<Annotation> getContextHolderAnnotations() {
+    private List<Annotation> loadBootMetadata() {
         Annotation[] annotations = contextHolder.getClass().getAnnotations();
         if (annotations.length == 0) {
             return Collections.emptyList();
@@ -1145,6 +1083,121 @@ final class SimpleContext implements Context {
             }
             result.addAll(Arrays.asList(annotationTypeAnnotations));
         }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    @NotNull
+    private Set<String> loadBoots(@NotNull ContextHolder holder)
+            throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        Validation.notNull(holder, "Context holder must not be null.");
+        Class<? extends ContextHolder> owner = holder.getClass();
+        Set<String> scanPackages = new HashSet<>();
+        for (Annotation annotation : loadBootMetadata()) {
+            if (annotation instanceof Scan) {
+                Scan scan = (Scan) annotation;
+                String[] value = scan.value();
+                if (value.length != 0) {
+                    scanPackages.addAll(Arrays.stream(value)
+                            .map(s -> s.replace('\\', '/').replace('.', '/'))
+                            .collect(Collectors.toList()));
+                }
+            } else if (annotation instanceof RegisterFactory) {
+                RegisterFactory registerFactory = (RegisterFactory) annotation;
+                registerBeanFactory(
+                        registerFactory.metadata(),
+                        registerFactory.beanFactory().getConstructor().newInstance());
+            } else if (annotation instanceof RegisterProperty) {
+                RegisterProperty registerProperty = (RegisterProperty) annotation;
+                registerProperty(registerProperty.key(), registerProperty.value());
+            } else if (annotation instanceof RegisterFactories) {
+                RegisterFactories registerFactories = (RegisterFactories) annotation;
+                for (RegisterFactory registerFactory : registerFactories.value()) {
+                    registerBeanFactory(
+                            registerFactory.metadata(),
+                            registerFactory.beanFactory().getConstructor().newInstance());
+                }
+            } else if (annotation instanceof RegisterProperties) {
+                RegisterProperties registerProperties = (RegisterProperties) annotation;
+                for (RegisterProperty registerProperty : registerProperties.value()) {
+                    registerProperty(registerProperty.key(), registerProperty.value());
+                }
+            }
+        }
+        scanPackages.add(owner.getPackage().getName().replace('.', '/'));
+        return scanPackages;
+    }
+
+    @NotNull
+    private Set<File> loadBootFiles(@NotNull ContextHolder holder) throws URISyntaxException {
+        Validation.notNull(holder, "Context holder must not be null.");
+        Class<? extends ContextHolder> owner = holder.getClass();
+        CodeSource codeSource = owner.getProtectionDomain().getCodeSource();
+        Validation.notNull(codeSource, String.format("Context holder '%s' must have a code source.", owner));
+        URL location = codeSource.getLocation();
+        Validation.notNull(location, String.format("Context holder '%s' must have a location.", owner));
+        File ownerFile = new File(location.toURI());
+        Annotation[] annotations = owner.getAnnotations();
+        Set<File> result = new LinkedHashSet<>(annotations.length + 1);
+        for (Annotation annotation : annotations) {
+            Class<? extends Annotation> annotationType = annotation.annotationType();
+            if (annotationType.isAnnotationPresent(Scan.class)) {
+                codeSource = annotationType.getProtectionDomain().getCodeSource();
+                if (codeSource == null) {
+                    continue;
+                }
+                location = codeSource.getLocation();
+                if (location == null) {
+                    continue;
+                }
+                File bootFile = new File(location.toURI());
+                if (!bootFile.exists()
+                        || bootFile.isDirectory()
+                        || !bootFile.getName().endsWith(".jar")) {
+                    continue;
+                }
+                result.add(bootFile);
+            }
+        }
+        result.add(ownerFile);
+        return result;
+    }
+
+    @NotNull
+    private Set<String> loadBootClasses(
+            @NotNull ContextHolder holder, @NotNull File bootFile, @NotNull Set<String> scanPackages)
+            throws IOException {
+        Validation.notNull(holder, "Context holder must not be null.");
+        Validation.notNull(bootFile, "Boot file must not be null.");
+        Validation.notNull(scanPackages, "Scan packages must not be null.");
+        if (scanPackages.isEmpty()) {
+            return Collections.emptySet();
+        }
+        String owner = holder.getClass().getName().replace('.', '/');
+        Set<String> result = new LinkedHashSet<>(64);
+        functional(new JarFile(bootFile)).use(jar -> {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String entryName = entry.getName();
+                if (!entryName.endsWith(".class") || scanPackages.stream().noneMatch(entryName::startsWith)) {
+                    continue;
+                }
+                String className =
+                        entryName.substring(0, entryName.length() - 6).replace('\\', '/');
+                if (className.equals(owner)) {
+                    continue;
+                }
+                if (!functional(jar.getInputStream(entry))
+                        .use(Boolean.class, input -> className.equals(new ClassReader(input).getClassName()))) {
+                    continue;
+                }
+                result.add(entryName);
+            }
+        });
         return result;
     }
 }
