@@ -2,9 +2,6 @@
 jreleaser = "1.18.0"
 lombok = "1.18.38"
 sugar = "0.1.0-SNAPSHOT"
-hikariCP = "4.0.3"
-mybatis = "3.5.19"
-jedis = "6.0.0"
 byte-buddy = "1.17.5"
 
 [plugins]
@@ -13,7 +10,4 @@ jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
 [libraries]
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 sugar = { group = "team.idealstate.sugar", name = "sugar", version.ref = "sugar" }
-hikariCP = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikariCP" }
-mybatis = { group = "org.mybatis", name = "mybatis", version.ref = "mybatis" }
-jedis = { group = "redis.clients", name = "jedis", version.ref = "jedis" }
 byte-buddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byte-buddy" }

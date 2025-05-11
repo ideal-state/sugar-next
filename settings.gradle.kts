@@ -14,5 +14,3 @@ pluginManagement {
 plugins {
     id("team.idealstate.glass") version "0.1.0-SNAPSHOT"
 }
-
-multiModule()
