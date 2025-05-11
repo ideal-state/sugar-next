@@ -87,7 +87,7 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
 
     @NotNull
     JavaClass forName(@NotNull String className, ClassLoader classLoader) {
-        Validation.notNullOrBlank(className, "className must not be null or blank.");
+        Validation.notNullOrBlank(className, "Class name must not be null or blank.");
         String classpath = className.replace('\\', '/');
         if (classpath.endsWith(".class")) {
             className = classpath.substring(0, className.length() - 6);
@@ -124,7 +124,10 @@ public final class JavaCache extends ConcurrentHashMap<String, JavaClass> {
             if (classLoader == null) {
                 classLoader = getClass().getClassLoader();
             }
-            try (InputStream inputStream = classLoader.getResourceAsStream("/" + classpath)) {
+            if (classpath.charAt(0) == '/') {
+                classpath = classpath.substring(1);
+            }
+            try (InputStream inputStream = classLoader.getResourceAsStream(classpath)) {
                 if (inputStream == null) {
                     throw new BytecodeParsingException(new ClassNotFoundException(className));
                 }
