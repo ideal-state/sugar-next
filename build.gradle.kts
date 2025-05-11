@@ -45,7 +45,7 @@ repositories {
 dependencies {
     api(libs.sugar)
 
-    api(libs.byte.buddy)
+    implementation(libs.byte.buddy)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
