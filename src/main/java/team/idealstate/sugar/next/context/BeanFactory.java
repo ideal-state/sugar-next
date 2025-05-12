@@ -30,5 +30,10 @@ public interface BeanFactory<M extends Annotation> {
     <T> T create(@NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked);
 
     @NotNull
-    <T> T proxy(@NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull T instance);
+    <T> T proxy(
+            @NotNull Context context,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull T instance,
+            @NotNull Class<T> marked);
 }

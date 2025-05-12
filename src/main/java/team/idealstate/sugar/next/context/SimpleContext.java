@@ -500,7 +500,7 @@ final class SimpleContext implements Context {
             result = instance;
             Validation.is(
                     marked.isInstance(instance),
-                    String.format("instance '%s' must be an instance of '%s'.", instance, marked));
+                    String.format("Instance '%s' must be an instance of '%s'.", instance, marked));
             Class<?> instanceType = instance.getClass();
             Log.debug(() -> String.format(
                     "(%s ms) created instance. (beanName='%s', instanceType='%s')",
@@ -540,7 +540,10 @@ final class SimpleContext implements Context {
                         "(%s ms) autowired methods. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("maybe proxy. (beanName='%s')", beanName));
-                proxy = maybeProxy(beanFactory, beanName, metadata, instance);
+                proxy = maybeProxy(beanFactory, beanName, metadata, instance, marked);
+                Validation.is(
+                        marked.isInstance(proxy),
+                        String.format("Proxy '%s' must be an instance of '%s'.", proxy, marked));
                 Log.debug(() -> String.format(
                         "(%s ms) maybe proxied. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
             } else {
@@ -757,8 +760,12 @@ final class SimpleContext implements Context {
 
     @NotNull
     private <M extends Annotation, T> T maybeProxy(
-            @NotNull BeanFactory<M> beanFactory, @NotNull String beanName, @NotNull M metadata, @NotNull T instance) {
-        T proxy = beanFactory.proxy(this, beanName, metadata, instance);
+            @NotNull BeanFactory<M> beanFactory,
+            @NotNull String beanName,
+            @NotNull M metadata,
+            @NotNull T instance,
+            @NotNull Class<T> marked) {
+        T proxy = beanFactory.proxy(this, beanName, metadata, instance, marked);
         Class<?> instanceType = instance.getClass();
         Validation.is(
                 instanceType.isInstance(proxy),
