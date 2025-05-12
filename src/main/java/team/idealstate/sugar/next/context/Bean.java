@@ -18,6 +18,7 @@ package team.idealstate.sugar.next.context;
 
 import java.lang.annotation.Annotation;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
+import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.validate.annotation.NotNull;
 import team.idealstate.sugar.validate.annotation.Nullable;
 
@@ -25,6 +26,9 @@ public interface Bean<T> {
 
     @NotNull
     String getName();
+
+    @NotNull
+    Scope getScope();
 
     @Nullable
     DependsOn getDependsOn();

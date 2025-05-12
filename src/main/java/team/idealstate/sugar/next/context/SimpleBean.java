@@ -22,6 +22,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
+import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.next.function.closure.Provider;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
@@ -31,6 +32,9 @@ final class SimpleBean<T> implements Bean<T> {
 
     @NonNull
     private final String name;
+
+    @NonNull
+    private final Scope scope;
 
     private final DependsOn dependsOn;
 

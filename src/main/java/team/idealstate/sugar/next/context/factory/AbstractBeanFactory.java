@@ -64,9 +64,10 @@ public abstract class AbstractBeanFactory<M extends Annotation> implements BeanF
             @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked) {
         Validation.is(validate(context, beanName, metadata, marked), "instance cannot be created.");
         T instance = doCreate(context, beanName, metadata, marked);
+        Validation.notNull(instance, "Instance must not be null.");
         Validation.is(
                 marked.isInstance(instance),
-                String.format("Instance '%s' must be an instance of marked '%s'.", instance, marked));
+                String.format("Instance '%s' must be an instance of marked '%s'.", instance.getClass(), marked));
         return instance;
     }
 
@@ -95,11 +96,12 @@ public abstract class AbstractBeanFactory<M extends Annotation> implements BeanF
         Validation.notNull(marked, "Marked must not be null.");
         Validation.is(
                 marked.isInstance(instance),
-                String.format("Instance '%s' must be an instance of marked '%s'.", instance, marked));
+                String.format("Instance '%s' must be an instance of marked '%s'.", instance.getClass(), marked));
         T proxy = doProxy(context, beanName, metadata, instance, marked);
+        Validation.notNull(proxy, "Proxy must not be null.");
         Validation.is(
                 marked.isInstance(proxy),
-                String.format("Proxy '%s' must be an instance of marked '%s'.", proxy, marked));
+                String.format("Proxy '%s' must be an instance of marked '%s'.", proxy.getClass(), marked));
         return proxy;
     }
 }

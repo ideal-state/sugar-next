@@ -73,13 +73,13 @@ import team.idealstate.sugar.next.context.annotation.feature.Autowired;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Environment;
 import team.idealstate.sugar.next.context.annotation.feature.Named;
-import team.idealstate.sugar.next.context.annotation.feature.Prototype;
 import team.idealstate.sugar.next.context.annotation.feature.Qualifier;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactories;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactory;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterProperties;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterProperty;
 import team.idealstate.sugar.next.context.annotation.feature.Scan;
+import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.next.context.aware.Aware;
 import team.idealstate.sugar.next.context.aware.BeanNameAware;
 import team.idealstate.sugar.next.context.aware.ContextAware;
@@ -210,6 +210,7 @@ final class SimpleContext implements Context {
         Validation.notNullOrBlank(key, "key must not be null or blank.");
         Validation.notNull(value, "value must not be null.");
         mustDependOn(STATUS_INITIALIZED, false, false, null, (it) -> {
+            Log.debug(() -> String.format("Register property: '%s' = '%s'", key, value));
             it.properties.put(key, new SimpleContextProperty(Property.of(key, value)));
             return null;
         });
@@ -417,6 +418,8 @@ final class SimpleContext implements Context {
                         "metadataType '%s' must be equal to beanFactory.getMetadataType() '%s'.",
                         metadataType, beanFactoryMetadataType));
         mustDependOn(STATUS_INITIALIZED, false, false, null, (it) -> {
+            Log.debug(() ->
+                    String.format("Registering bean factory '%s' for metadata type '%s'.", beanFactory, metadataType));
             it.beanFactories.put(metadataType, beanFactory);
             return null;
         });
@@ -490,7 +493,8 @@ final class SimpleContext implements Context {
         T result = null;
         try {
             long[] start = {System.currentTimeMillis(), System.currentTimeMillis()};
-            Log.debug(() -> String.format("creating bean. (beanName='%s', marked='%s')", beanName, marked));
+            Log.debug(() -> String.format(
+                    "creating bean. (beanName='%s', marked='%s', beanFactory='%s')", beanName, marked, beanFactory));
             if (!inProgress.add(marked)) {
                 throw new IllegalStateException(String.format(
                         "circular dependency detected. (beanName='%s', marked='%s') %s", beanName, marked, inProgress));
@@ -498,14 +502,14 @@ final class SimpleContext implements Context {
             Log.debug(() -> String.format("create instance. (beanName='%s', metadata='%s')", beanName, metadata));
             T instance = beanFactory.create(this, beanName, metadata, marked);
             result = instance;
+            Validation.notNull(instance, "Instance must not be null.");
+            Class<?> instanceType = instance.getClass();
             Validation.is(
                     marked.isInstance(instance),
-                    String.format("Instance '%s' must be an instance of '%s'.", instance, marked));
-            Class<?> instanceType = instance.getClass();
+                    String.format("Instance '%s' must be an instance of '%s'.", instanceType, marked));
             Log.debug(() -> String.format(
                     "(%s ms) created instance. (beanName='%s', instanceType='%s')",
                     System.currentTimeMillis() - start[1], beanName, instanceType));
-            Validation.notNull(instance, "instance must not be null.");
             if (instance instanceof Aware) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("inject aware. (beanName='%s')", beanName));
@@ -541,9 +545,10 @@ final class SimpleContext implements Context {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("maybe proxy. (beanName='%s')", beanName));
                 proxy = maybeProxy(beanFactory, beanName, metadata, instance, marked);
+                Validation.notNull(proxy, "Proxy must not be null.");
                 Validation.is(
                         marked.isInstance(proxy),
-                        String.format("Proxy '%s' must be an instance of '%s'.", proxy, marked));
+                        String.format("Proxy '%s' must be an instance of '%s'.", proxy.getClass(), marked));
                 Log.debug(() -> String.format(
                         "(%s ms) maybe proxied. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
             } else {
@@ -767,9 +772,10 @@ final class SimpleContext implements Context {
             @NotNull Class<T> marked) {
         T proxy = beanFactory.proxy(this, beanName, metadata, instance, marked);
         Class<?> instanceType = instance.getClass();
+        Validation.notNull(proxy, "Proxy must not be null.");
         Validation.is(
                 instanceType.isInstance(proxy),
-                String.format("proxy '%s' must be an instance of '%s'.", proxy, instanceType));
+                String.format("proxy '%s' must be an instance of '%s'.", proxy.getClass(), instanceType));
         return proxy;
     }
 
@@ -923,13 +929,17 @@ final class SimpleContext implements Context {
                     continue;
                 }
                 Provider<Object> provider;
-                if (marked.isAnnotationPresent(Prototype.class)) {
+                Scope scope = marked.getAnnotation(Scope.class);
+                if (scope == null) {
+                    scope = Reflection.annotation(Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
+                }
+                if (Scope.PROTOTYPE.equals(scope.value())) {
                     provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, marked);
                 } else {
                     provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, marked));
                 }
                 SimpleBean<?> bean =
-                        new SimpleBean<>(beanName, dependsOn, metadataType, metadata, (Class) marked, provider);
+                        new SimpleBean<>(beanName, scope, dependsOn, metadataType, metadata, (Class) marked, provider);
                 nameMap.put(beanName, bean);
                 markedMap.put(marked, bean);
                 if (dependsOn != null) {
@@ -989,7 +999,20 @@ final class SimpleContext implements Context {
 
     private void doBeforeEnable() {}
 
-    private void doEnable() {}
+    private void doEnable() {
+        if (markedMap.isEmpty()) {
+            return;
+        }
+        for (SimpleBean<?> bean : markedMap.values()) {
+            String scope = bean.getScope().value();
+            if (StringUtils.isBlank(scope)) {
+                scope = Scope.DEFAULT;
+            }
+            if (Scope.SINGLETON.equals(scope)) {
+                bean.getInstance();
+            }
+        }
+    }
 
     private void doAfterEnable() {}
 

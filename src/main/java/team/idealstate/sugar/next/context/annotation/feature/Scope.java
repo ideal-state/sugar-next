@@ -25,4 +25,13 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface Prototype {}
+public @interface Scope {
+
+    String SINGLETON = "singleton";
+    String PROTOTYPE = "prototype";
+    String LAZY = "lazy";
+
+    String DEFAULT = LAZY;
+
+    String value() default DEFAULT;
+}
