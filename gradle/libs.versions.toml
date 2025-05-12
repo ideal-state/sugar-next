@@ -2,7 +2,6 @@
 jreleaser = "1.18.0"
 lombok = "1.18.38"
 sugar = "0.1.0-SNAPSHOT"
-byte-buddy = "1.17.5"
 
 [plugins]
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
@@ -10,4 +9,3 @@ jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
 [libraries]
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
 sugar = { group = "team.idealstate.sugar", name = "sugar", version.ref = "sugar" }
-byte-buddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byte-buddy" }
