@@ -18,6 +18,7 @@ package team.idealstate.sugar.next.database;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.validate.annotation.NotNull;
 
 /** 此接口应交给自动化框架使用，而不是开发者手动使用 */
@@ -41,31 +42,42 @@ public final class TransactionSession implements DatabaseSession {
     @NotNull
     public TransactionSession open() {
         count++;
+        Log.debug(() -> String.format("(%s) Opening transaction.", count));
         return this;
     }
 
     @Override
     public void commit() {
-        if (count <= 1) {
+        Log.debug(() -> String.format("(%s) Committing transaction.", count));
+        if (count <= 1 && !rollback) {
             databaseSession.commit();
+            Log.debug(() -> String.format("(%s) Committed transaction.", count));
         }
     }
 
+    private volatile boolean rollback = false;
+
     @Override
     public void rollback() {
+        rollback = true;
+        Log.debug(() -> String.format("(%s) Rolling back transaction, but not committed yet.", count));
         if (count <= 1) {
             databaseSession.rollback();
+            Log.debug(() -> String.format("(%s) Rolled back transaction.", count));
         }
     }
 
     @Override
     public void close() {
         count--;
+        Log.debug(() -> String.format("(%s) Closing transaction.", count));
         if (count <= 0) {
             try {
                 closer.run();
+                commit();
             } finally {
                 databaseSession.close();
+                Log.debug(() -> String.format("(%s) Closed transaction.", count));
             }
         }
     }
