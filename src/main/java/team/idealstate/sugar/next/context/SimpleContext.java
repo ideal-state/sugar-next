@@ -133,7 +133,7 @@ final class SimpleContext implements Context {
         int current = this.status;
         try {
             if (current > STATUS_ERROR) {
-                Validation.is(current == depend, "status must be " + depend + ".");
+                Validation.is(current >= depend, "status must be " + depend + ".");
             }
         } catch (Throwable e) {
             throw new ContextException(e);
@@ -436,7 +436,7 @@ final class SimpleContext implements Context {
     public <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType) {
         Validation.notNullOrBlank(beanName, "beanName must not be blank.");
         Validation.notNull(beanType, "beanType must not be null.");
-        return mustDependOn(STATUS_ENABLED, true, false, null, it -> {
+        return mustDependOn(STATUS_LOADED, true, false, null, it -> {
             SimpleBean<?> bean = it.nameMap.get(beanName);
             if (bean == null) {
                 return null;
@@ -453,7 +453,7 @@ final class SimpleContext implements Context {
     @SuppressWarnings({"unchecked"})
     public <T> Bean<T> getBean(@NotNull Class<T> beanType) {
         Validation.notNull(beanType, "beanType must not be null.");
-        return mustDependOn(STATUS_ENABLED, true, false, null, it -> {
+        return mustDependOn(STATUS_LOADED, true, false, null, it -> {
             SimpleBean<?> bean = it.markedMap.get(beanType);
             if (bean == null) {
                 for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.markedMap.entrySet()) {
@@ -471,7 +471,7 @@ final class SimpleContext implements Context {
     @SuppressWarnings({"unchecked"})
     public <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType) {
         Validation.notNull(beanType, "beanType must not be null.");
-        return mustDependOn(STATUS_ENABLED, true, false, Collections.emptyList(), it -> {
+        return mustDependOn(STATUS_LOADED, true, false, Collections.emptyList(), it -> {
             List<Bean<T>> result = new LinkedList<>();
             for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.markedMap.entrySet()) {
                 Class<?> marked = entry.getKey();
