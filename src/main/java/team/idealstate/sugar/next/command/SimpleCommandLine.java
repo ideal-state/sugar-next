@@ -464,18 +464,43 @@ final class SimpleCommandLine implements CommandLine {
             }
             completed = completer.complete(context, arguments[0]);
         } else {
-            SimpleCommandLine accepted = acceptedChildren.get(acceptedChildren.size() - 1);
+            int size = acceptedChildren.size();
+            SimpleCommandLine accepted = acceptedChildren.get(size - 1);
             if (accepted == null) {
                 return Collections.emptyList();
             }
-            CommandArgument.Completer completer = accepted.getCompleter(context);
+            CommandArgument.Completer completer;
+            int depth;
+            if (size == arguments.length) {
+                completer = accepted.getCompleter(context);
+                depth = accepted.depth;
+            } else {
+                completer = (context0, argument) -> {
+                    Deque<SimpleCommandLine> children = new ArrayDeque<>(accepted.children);
+                    if (children.isEmpty()) {
+                        return Collections.emptyList();
+                    }
+                    List<String> ret = new ArrayList<>(children.size());
+                    CommandSender sender = context0.getSender();
+                    for (SimpleCommandLine child : children) {
+                        if (!validate(sender, child.permission, child.isOpen())) {
+                            continue;
+                        }
+                        CommandArgument.Completer childCompleter = child.completer;
+                        if (childCompleter != null) {
+                            ret.addAll(childCompleter.complete(context0, argument));
+                        }
+                    }
+                    return ret;
+                };
+                depth = accepted.depth + 1;
+            }
             if (completer == null) {
                 return Collections.emptyList();
             }
             if (!validate(context.getSender(), accepted.permission, accepted.open)) {
                 return Collections.emptyList();
             }
-            int depth = accepted.depth;
             if (arguments.length - 1 != depth) {
                 return Collections.emptyList();
             }
