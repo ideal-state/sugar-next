@@ -164,8 +164,9 @@ public @interface CommandArgument {
             if (targetType.isInstance(done)) {
                 return result;
             }
-            throw new CommandArgumentConversionException(
-                    "The type of the argument is not matched with the targetType.");
+            throw new CommandArgumentConversionException(String.format(
+                    "The type of the argument '%s' instance '%s' is not instance of the target type '%s'.",
+                    argument, done, getTargetType()));
         }
     }
 
