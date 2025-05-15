@@ -29,9 +29,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.core.JsonFactory;
 import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.ObjectMapper;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.json.JsonMapper;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import team.idealstate.sugar.internal.org.yaml.snakeyaml.Yaml;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.context.Context;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
@@ -48,8 +49,9 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
     public static final Set<String> SUPPORTED_FILE_EXTENSIONS =
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(".yml", ".yaml", ".json")));
 
-    private final Lazy<ObjectMapper> yaml = lazy(() -> new ObjectMapper(new YAMLFactory()).findAndRegisterModules());
-    private final Lazy<ObjectMapper> json = lazy(() -> new ObjectMapper(new JsonFactory()).findAndRegisterModules());
+    private final Lazy<Yaml> snakeyaml = lazy(Yaml::new);
+    private final Lazy<ObjectMapper> yaml = lazy(() -> new YAMLMapper().findAndRegisterModules());
+    private final Lazy<ObjectMapper> json = lazy(() -> new JsonMapper().findAndRegisterModules());
 
     public ConfigurationBeanFactory() {
         super(Configuration.class);
@@ -165,7 +167,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
             }
             return (T) functional(resource).use(Object.class, input -> {
                 if (extension.equals(".yml") || extension.equals(".yaml")) {
-                    return yaml.get().readValue(input, marked);
+                    return yaml.get().convertValue(snakeyaml.get().load(input), marked);
                 } else if (extension.equals(".json")) {
                     return json.get().readValue(input, marked);
                 }
