@@ -150,9 +150,11 @@ public final class Expression implements Cloneable {
                 if (Parentheses.RIGHT.isSymbol(symbolStr)) {
                     symbolBuilder.setLength(0);
                     if (symbolStack.isEmpty() || !symbolStack.contains(Parentheses.LEFT)) {
-                        throw new ExpressionSyntaxException(expression, line, column, String.format(
-                                "Invalid operator '%s'!", Parentheses.RIGHT.getSymbol()
-                        ));
+                        throw new ExpressionSyntaxException(
+                                expression,
+                                line,
+                                column,
+                                String.format("Invalid operator '%s'!", Parentheses.RIGHT.getSymbol()));
                     }
                     Object numericVariable =
                             makeNumericVariable(numberBuilder, variableBuilder, line, column, isDecimal, true);
@@ -211,9 +213,8 @@ public final class Expression implements Cloneable {
                 symbolBuilder.setLength(0);
                 Operator operator = operatorTable.get(symbolStr);
                 if (operator == null) {
-                    throw new ExpressionSyntaxException(expression, line, column, String.format(
-                            "Invalid operator '%s'!", symbolStr
-                    ));
+                    throw new ExpressionSyntaxException(
+                            expression, line, column, String.format("Invalid operator '%s'!", symbolStr));
                 }
                 Object numericVariable =
                         makeNumericVariable(numberBuilder, variableBuilder, line, column, isDecimal, true);
@@ -246,14 +247,12 @@ public final class Expression implements Cloneable {
             }
             column--;
             if (symbolBuilder.length() != 0) {
-                throw new ExpressionSyntaxException(expression, line, column, String.format(
-                        "Invalid symbol '%s'!", symbolBuilder
-                ));
+                throw new ExpressionSyntaxException(
+                        expression, line, column, String.format("Invalid symbol '%s'!", symbolBuilder));
             }
             if (symbolStack.contains(Parentheses.LEFT)) {
-                throw new ExpressionSyntaxException(expression, line, column, String.format(
-                        "Invalid symbol stack '%s'!", symbolStack
-                ));
+                throw new ExpressionSyntaxException(
+                        expression, line, column, String.format("Invalid symbol stack '%s'!", symbolStack));
             }
             Object numericVariable = makeNumericVariable(numberBuilder, variableBuilder, line, column, isDecimal, true);
             if (numericVariable != null) {
@@ -264,9 +263,8 @@ public final class Expression implements Cloneable {
             }
             symbolStack.clear();
             if (operationStack.isEmpty()) {
-                throw new ExpressionSyntaxException(expression, line, column, String.format(
-                        "Invalid operation stack '%s'!", operationStack
-                ));
+                throw new ExpressionSyntaxException(
+                        expression, line, column, String.format("Invalid operation stack '%s'!", operationStack));
             }
             int countNumericVariable = 0;
             int countOperator = 0;
@@ -278,18 +276,16 @@ public final class Expression implements Cloneable {
                 } else if (symbol instanceof Variable || symbol instanceof Number) {
                     countNumericVariable++;
                 } else {
-                    throw new ExpressionSyntaxException(expression, line, column, String.format(
-                            "Invalid symbol '%s'!", symbol
-                    ));
+                    throw new ExpressionSyntaxException(
+                            expression, line, column, String.format("Invalid symbol '%s'!", symbol));
                 }
             }
 
             List<Object> result = new ArrayList<>(operationStack);
             Collections.reverse(result);
             if (countNumericVariable != countOperator + 1) {
-                throw new ExpressionSyntaxException(expression, line, column, String.format(
-                        "Invalid operation stack '%s'!", result
-                ));
+                throw new ExpressionSyntaxException(
+                        expression, line, column, String.format("Invalid operation stack '%s'!", result));
             }
             this.compiled = Collections.unmodifiableList(result);
         }
@@ -399,13 +395,10 @@ public final class Expression implements Cloneable {
         return calculate(context).doubleValue() > 0;
     }
 
-    /**
-     * @see Expression#isTrue(Map)
-     */
+    /** @see Expression#isTrue(Map) */
     public boolean isTrue() {
         return isTrue(Collections.emptyMap());
     }
-
 
     /**
      * @param context 变量上下文
@@ -415,9 +408,7 @@ public final class Expression implements Cloneable {
         return !isTrue(context);
     }
 
-    /**
-     * @see Expression#isFalse(Map)
-     */
+    /** @see Expression#isFalse(Map) */
     public boolean isFalse() {
         return isFalse(Collections.emptyMap());
     }

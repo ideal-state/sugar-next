@@ -16,10 +16,6 @@
 
 package team.idealstate.sugar.next.calculate;
 
-import lombok.Getter;
-import team.idealstate.sugar.validate.Validation;
-import team.idealstate.sugar.validate.annotation.NotNull;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -29,8 +25,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import lombok.Getter;
+import team.idealstate.sugar.validate.Validation;
+import team.idealstate.sugar.validate.annotation.NotNull;
 
 @Getter
 public enum Operator implements Symbol {
@@ -46,20 +43,18 @@ public enum Operator implements Symbol {
     LESS_THAN_OR_EQUALS("<=", 0),
     GREATER_THAN_OR_EQUALS(">=", 0);
 
-    public static final Set<Character> KEYWORDS =
-            Collections.unmodifiableSet(Arrays.stream(Operator.values())
-                    .map(Symbol::getSymbol)
-                    .map(String::toCharArray)
-                    .map(chars -> {
-                        List<Character> characters = new ArrayList<>(chars.length);
-                        for (char c : chars) {
-                            characters.add(c);
-                        }
-                        return characters;
-                    })
-                    .flatMap(List::stream)
-                    .collect(HashSet::new, HashSet::add, HashSet::addAll)
-            );
+    public static final Set<Character> KEYWORDS = Collections.unmodifiableSet(Arrays.stream(Operator.values())
+            .map(Symbol::getSymbol)
+            .map(String::toCharArray)
+            .map(chars -> {
+                List<Character> characters = new ArrayList<>(chars.length);
+                for (char c : chars) {
+                    characters.add(c);
+                }
+                return characters;
+            })
+            .flatMap(List::stream)
+            .collect(HashSet::new, HashSet::add, HashSet::addAll));
     public static final int MIN_PRIORITY = Integer.MIN_VALUE;
     public static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
     private static final Set<Class<?>> INTEGER_CLASSES = Collections.unmodifiableSet(
@@ -78,12 +73,14 @@ public enum Operator implements Symbol {
 
     private static void validateSymbol(String symbol) {
         if (Variable.hasNameContent(symbol)) {
-            throw new IllegalArgumentException("Invalid symbol '" + symbol + "', because it contains a variable keyword.");
+            throw new IllegalArgumentException(
+                    "Invalid symbol '" + symbol + "', because it contains a variable keyword.");
         }
         for (int i = 0; i < symbol.length(); i++) {
             char c = symbol.charAt(i);
             if (Parentheses.KEYWORDS.contains(c)) {
-                throw new IllegalArgumentException("Invalid symbol '" + symbol + "', because it contains a parentheses keyword.");
+                throw new IllegalArgumentException(
+                        "Invalid symbol '" + symbol + "', because it contains a parentheses keyword.");
             }
         }
     }

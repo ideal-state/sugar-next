@@ -24,7 +24,8 @@ import java.util.stream.Stream;
 public interface Symbol {
 
     static Set<Character> getKeywords() {
-        return Stream.concat(Operator.KEYWORDS.stream(), Parentheses.KEYWORDS.stream()).collect(Collectors.toSet());
+        return Stream.concat(Operator.KEYWORDS.stream(), Parentheses.KEYWORDS.stream())
+                .collect(Collectors.toSet());
     }
 
     String getSymbol();

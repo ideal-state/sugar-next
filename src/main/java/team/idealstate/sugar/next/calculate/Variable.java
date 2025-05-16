@@ -66,12 +66,14 @@ public final class Variable implements Cloneable {
 
     public static boolean isNameHeader(char header) {
         return (NAMING_HEADER_RULE.contains(header)
-                || CHINESE_CHAR.matcher(String.valueOf(header)).find()) && !Symbol.getKeywords().contains(header);
+                        || CHINESE_CHAR.matcher(String.valueOf(header)).find())
+                && !Symbol.getKeywords().contains(header);
     }
 
     public static boolean isNameContent(char content) {
         return (NAMING_RULE.contains(content)
-                || CHINESE_CHAR.matcher(String.valueOf(content)).find()) && !Symbol.getKeywords().contains(content);
+                        || CHINESE_CHAR.matcher(String.valueOf(content)).find())
+                && !Symbol.getKeywords().contains(content);
     }
 
     public static boolean hasNameContent(String content) {
