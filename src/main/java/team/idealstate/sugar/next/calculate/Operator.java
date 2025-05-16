@@ -16,45 +16,75 @@
 
 package team.idealstate.sugar.next.calculate;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.RoundingMode;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import lombok.Getter;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 @Getter
 public enum Operator implements Symbol {
-    ADD('+', 0),
-    SUBTRACT('-', 0),
-    MULTIPLY('*', 1),
-    DIVIDE('/', 1),
-    MOD('%', 1),
-    POWER('^', 1);
+    ADD("+", 1),
+    SUBTRACT("-", 1),
+    MULTIPLY("*", 2),
+    DIVIDE("/", 2),
+    MOD("%", 2),
+    POWER("^", 2),
+    EQUALS("==", 0),
+    LESS_THAN("<", 0),
+    GREATER_THAN(">", 0),
+    LESS_THAN_OR_EQUALS("<=", 0),
+    GREATER_THAN_OR_EQUALS(">=", 0);
 
+    public static final Set<Character> KEYWORDS =
+            Collections.unmodifiableSet(Arrays.stream(Operator.values())
+                    .map(Symbol::getSymbol)
+                    .map(String::toCharArray)
+                    .map(chars -> {
+                        List<Character> characters = new ArrayList<>(chars.length);
+                        for (char c : chars) {
+                            characters.add(c);
+                        }
+                        return characters;
+                    })
+                    .flatMap(List::stream)
+                    .collect(HashSet::new, HashSet::add, HashSet::addAll)
+            );
     public static final int MIN_PRIORITY = Integer.MIN_VALUE;
     public static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
     private static final Set<Class<?>> INTEGER_CLASSES = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class)));
     private static final Set<Class<?>> DECIMAL_CLASSES =
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(Float.class, Double.class)));
-    private final char symbol;
+    private final String symbol;
     private final int priority;
 
-    Operator(char symbol, int priority) {
+    Operator(String symbol, int priority) {
         validateSymbol(symbol);
         validatePriority(priority);
         this.symbol = symbol;
         this.priority = priority;
     }
 
-    private static void validateSymbol(char symbol) {
-        if (Variable.isNameContent(symbol)) {
-            throw new IllegalArgumentException("Invalid symbol '" + symbol + "', because it is a variable keyword.");
+    private static void validateSymbol(String symbol) {
+        if (Variable.hasNameContent(symbol)) {
+            throw new IllegalArgumentException("Invalid symbol '" + symbol + "', because it contains a variable keyword.");
+        }
+        for (int i = 0; i < symbol.length(); i++) {
+            char c = symbol.charAt(i);
+            if (Parentheses.KEYWORDS.contains(c)) {
+                throw new IllegalArgumentException("Invalid symbol '" + symbol + "', because it contains a parentheses keyword.");
+            }
         }
     }
 
@@ -112,6 +142,16 @@ public enum Operator implements Symbol {
                     return BigDecimal.ONE.divide(positivePow, ROUNDING_MODE);
                 }
                 return firstVal.pow(exponent);
+            case EQUALS:
+                return firstVal.compareTo(secondVal) == 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+            case LESS_THAN:
+                return firstVal.compareTo(secondVal) < 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+            case GREATER_THAN:
+                return firstVal.compareTo(secondVal) > 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+            case LESS_THAN_OR_EQUALS:
+                return firstVal.compareTo(secondVal) <= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+            case GREATER_THAN_OR_EQUALS:
+                return firstVal.compareTo(secondVal) >= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
             default:
                 throw new IllegalArgumentException("Unknown operator: " + this);
         }

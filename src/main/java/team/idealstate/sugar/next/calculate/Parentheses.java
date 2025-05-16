@@ -18,14 +18,37 @@ package team.idealstate.sugar.next.calculate;
 
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.IntStream;
+
 @Getter
 public enum Parentheses implements Symbol {
-    LEFT('('),
-    RIGHT(')');
+    LEFT("("),
+    RIGHT(")");
 
-    private final char symbol;
+    public static final Set<Character> KEYWORDS =
+            Collections.unmodifiableSet(Arrays.stream(Parentheses.values())
+                    .map(Symbol::getSymbol)
+                    .map(String::toCharArray)
+                    .map(chars -> {
+                        List<Character> characters = new ArrayList<>(chars.length);
+                        for (char c : chars) {
+                            characters.add(c);
+                        }
+                        return characters;
+                    })
+                    .flatMap(List::stream)
+                    .collect(HashSet::new, HashSet::add, HashSet::addAll)
+            );
 
-    Parentheses(char symbol) {
+    private final String symbol;
+
+    Parentheses(String symbol) {
         this.symbol = symbol;
     }
 }

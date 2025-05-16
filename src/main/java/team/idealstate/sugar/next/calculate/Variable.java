@@ -65,13 +65,24 @@ public final class Variable implements Cloneable {
     }
 
     public static boolean isNameHeader(char header) {
-        return NAMING_HEADER_RULE.contains(header)
-                || CHINESE_CHAR.matcher(String.valueOf(header)).find();
+        return (NAMING_HEADER_RULE.contains(header)
+                || CHINESE_CHAR.matcher(String.valueOf(header)).find()) && !Symbol.getKeywords().contains(header);
     }
 
     public static boolean isNameContent(char content) {
-        return NAMING_RULE.contains(content)
-                || CHINESE_CHAR.matcher(String.valueOf(content)).find();
+        return (NAMING_RULE.contains(content)
+                || CHINESE_CHAR.matcher(String.valueOf(content)).find()) && !Symbol.getKeywords().contains(content);
+    }
+
+    public static boolean hasNameContent(String content) {
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (NAMING_RULE.contains(c)
+                    || CHINESE_CHAR.matcher(String.valueOf(c)).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void validateName(CharSequence name) {

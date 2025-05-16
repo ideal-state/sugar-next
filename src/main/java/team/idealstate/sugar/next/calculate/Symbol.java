@@ -16,11 +16,20 @@
 
 package team.idealstate.sugar.next.calculate;
 
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public interface Symbol {
 
-    char getSymbol();
+    static Set<Character> getKeywords() {
+        return Stream.concat(Operator.KEYWORDS.stream(), Parentheses.KEYWORDS.stream()).collect(Collectors.toSet());
+    }
 
-    default boolean isSymbol(char symbol) {
-        return getSymbol() == symbol;
+    String getSymbol();
+
+    default boolean isSymbol(String symbol) {
+        return Objects.equals(getSymbol(), symbol);
     }
 }
