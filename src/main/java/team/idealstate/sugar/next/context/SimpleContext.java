@@ -593,6 +593,7 @@ final class SimpleContext implements Context {
                 Log.warn(String.format("Autowire: '%s' static method '%s' is ignored.", instanceTypeName, methodName));
                 continue;
             }
+            long start = System.currentTimeMillis();
             Parameter[] parameters = method.getParameters();
             Object[] parameterValues = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++) {
@@ -649,7 +650,11 @@ final class SimpleContext implements Context {
             }
             method.setAccessible(true);
             try {
+                Log.debug(() -> String.format("Autowire: '%s' method '%s'...", instanceTypeName, methodName));
                 method.invoke(instance, parameterValues);
+                Log.debug(() -> String.format(
+                        "(%s) Autowire: '%s' method '%s' done.",
+                        System.currentTimeMillis() - start, instanceTypeName, methodName));
             } catch (IllegalAccessException | InvocationTargetException e) {
                 throw new ContextException(e);
             }
