@@ -328,8 +328,8 @@ final class SimpleCommandLine implements CommandLine {
                         .getSecond();
             } while (!nextAcceptedChildren.isEmpty());
             int count = acceptedChildren.size();
-            double score = arguments.length * 1.0D / count;
-            Log.debug(() -> String.format("score: %s / %s = %s", arguments.length, count, score));
+            double score = count * 1.0D / arguments.length;
+            Log.debug(() -> String.format("score: %s / %s = %s", count, arguments.length, score));
             if (!accepted.containsKey(score)) {
                 accepted.put(score, acceptedChildren);
             }
