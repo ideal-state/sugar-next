@@ -21,7 +21,10 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NonNull;
@@ -123,6 +126,23 @@ public @interface CommandArgument {
 
     @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
     abstract class AbstractConverter<T> implements Converter<T> {
+        private static final Map<Class<?>, Class<?>> PRIMITIVE_TABLE =
+                Collections.unmodifiableMap(new HashMap<Class<?>, Class<?>>() {
+                    private static final long serialVersionUID = 7193511042572918378L;
+
+                    {
+                        put(boolean.class, Boolean.class);
+                        put(byte.class, Byte.class);
+                        put(char.class, Character.class);
+                        put(short.class, Short.class);
+                        put(int.class, Integer.class);
+                        put(long.class, Long.class);
+                        put(float.class, Float.class);
+                        put(double.class, Double.class);
+                        put(void.class, Void.class);
+                    }
+                });
+
         @NonNull
         private final Class<T> targetType;
 
@@ -161,7 +181,10 @@ public @interface CommandArgument {
                 return result;
             }
             Class<?> targetType = Validation.requireNotNull(getTargetType(), "targetType must not be null.");
-            if (targetType.isInstance(done)) {
+            if (targetType.isInstance(done)
+                    || (targetType.isPrimitive()
+                            && PRIMITIVE_TABLE.containsKey(targetType)
+                            && PRIMITIVE_TABLE.get(targetType).isInstance(done))) {
                 return result;
             }
             throw new CommandArgumentConversionException(String.format(
