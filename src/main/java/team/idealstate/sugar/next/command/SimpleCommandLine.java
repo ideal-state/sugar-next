@@ -16,6 +16,8 @@
 
 package team.idealstate.sugar.next.command;
 
+import static team.idealstate.sugar.next.function.Functional.pair;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -298,21 +300,21 @@ final class SimpleCommandLine implements CommandLine {
     }
 
     @NotNull
-    private static List<SimpleCommandLine> accept(
+    private static Pair<Double, List<SimpleCommandLine>> accept(
             @NotNull SimpleCommandLine parent,
             @NotNull CommandContext context,
             int current,
             @NotNull String... arguments) {
         int next = current + 1;
         if (next >= arguments.length) {
-            return Collections.emptyList();
+            return pair(0.D, Collections.emptyList());
         }
         Deque<SimpleCommandLine> children = new ArrayDeque<>(parent.children);
         if (children.isEmpty()) {
-            return Collections.emptyList();
+            return pair(0.D, Collections.emptyList());
         }
         String argument = arguments[next];
-        Map<Integer, List<SimpleCommandLine>> accepted = new HashMap<>(children.size());
+        Map<Double, List<SimpleCommandLine>> accepted = new HashMap<>(children.size());
         for (SimpleCommandLine child : children) {
             if (child.depth != next || !child.accept(context, argument)) {
                 continue;
@@ -321,19 +323,22 @@ final class SimpleCommandLine implements CommandLine {
             List<SimpleCommandLine> nextAcceptedChildren = Collections.singletonList(child);
             do {
                 acceptedChildren.addAll(nextAcceptedChildren);
-                nextAcceptedChildren =
-                        accept(acceptedChildren.get(acceptedChildren.size() - 1), context, next, arguments);
+                nextAcceptedChildren = accept(
+                                acceptedChildren.get(acceptedChildren.size() - 1), context, next, arguments)
+                        .getSecond();
             } while (!nextAcceptedChildren.isEmpty());
             int count = acceptedChildren.size();
-            if (!accepted.containsKey(count)) {
-                accepted.put(count, acceptedChildren);
+            double score = arguments.length * 1.0D / count;
+            Log.debug(() -> String.format("score: %s / %s = %s", arguments.length, count, score));
+            if (!accepted.containsKey(score)) {
+                accepted.put(score, acceptedChildren);
             }
         }
         if (accepted.isEmpty()) {
-            return Collections.emptyList();
+            return pair(0.D, Collections.emptyList());
         }
-        Integer key = accepted.keySet().stream().max(Integer::compare).get();
-        return accepted.get(key);
+        Double key = accepted.keySet().stream().max(Double::compare).get();
+        return pair(key, accepted.get(key));
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -421,7 +426,8 @@ final class SimpleCommandLine implements CommandLine {
         if (!validate(context, arguments)) {
             return CommandResult.failure();
         }
-        List<SimpleCommandLine> acceptedChildren = accept(this, context, depth, arguments);
+        Pair<Double, List<SimpleCommandLine>> accept = accept(this, context, depth, arguments);
+        List<SimpleCommandLine> acceptedChildren = accept.getSecond();
         if (acceptedChildren.isEmpty()) {
             Log.debug(() -> String.format(
                     "Command '%s' with arguments '%s' not found.",
@@ -430,9 +436,10 @@ final class SimpleCommandLine implements CommandLine {
         }
         SimpleCommandLine accepted = acceptedChildren.get(acceptedChildren.size() - 1);
         Validation.notNull(accepted, "Accepted must not be null.");
+        Double score = accept.getFirst();
         Log.debug(() -> String.format(
-                "Command '%s' with arguments '%s' is found. %s",
-                getName(), String.join(ARGUMENTS_DELIMITER, arguments), accepted));
+                "(%s) Command '%s' with arguments '%s' is found. %s",
+                score, getName(), String.join(ARGUMENTS_DELIMITER, arguments), accepted));
         CommandExecutor executor = accepted.executor;
         if (executor == null) {
             return CommandResult.failure();
@@ -463,7 +470,8 @@ final class SimpleCommandLine implements CommandLine {
         if (!validate(context, arguments)) {
             return Collections.emptyList();
         }
-        List<SimpleCommandLine> acceptedChildren = accept(this, context, depth, arguments);
+        Pair<Double, List<SimpleCommandLine>> accept = accept(this, context, depth, arguments);
+        List<SimpleCommandLine> acceptedChildren = accept.getSecond();
         List<String> completed;
         if (acceptedChildren.isEmpty()) {
             if (arguments.length > 1 || completer == null) {
