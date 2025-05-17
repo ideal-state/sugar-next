@@ -33,8 +33,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
+import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.command.annotation.CommandArgument;
 import team.idealstate.sugar.next.command.annotation.CommandHandler;
 import team.idealstate.sugar.next.command.exception.CommandArgumentConversionException;
@@ -43,6 +45,7 @@ import team.idealstate.sugar.next.databind.Pair;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 
+@Data
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 final class SimpleCommandLine implements CommandLine {
 
@@ -420,12 +423,16 @@ final class SimpleCommandLine implements CommandLine {
         }
         List<SimpleCommandLine> acceptedChildren = accept(this, context, depth, arguments);
         if (acceptedChildren.isEmpty()) {
+            Log.debug(() -> String.format(
+                    "Command '%s' with arguments '%s' not found.",
+                    getName(), String.join(ARGUMENTS_DELIMITER, arguments)));
             return CommandResult.failure();
         }
         SimpleCommandLine accepted = acceptedChildren.get(acceptedChildren.size() - 1);
-        if (accepted == null) {
-            return CommandResult.failure();
-        }
+        Validation.notNull(accepted, "Accepted must not be null.");
+        Log.debug(() -> String.format(
+                "Command '%s' with arguments '%s' is found. %s",
+                getName(), String.join(ARGUMENTS_DELIMITER, arguments), accepted));
         CommandExecutor executor = accepted.executor;
         if (executor == null) {
             return CommandResult.failure();
