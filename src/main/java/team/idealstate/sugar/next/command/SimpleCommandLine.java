@@ -300,6 +300,18 @@ final class SimpleCommandLine implements CommandLine {
     }
 
     @NotNull
+    private static int getLastChildDepth(@NotNull SimpleCommandLine parent) {
+        int depth = parent.depth;
+        for (SimpleCommandLine child : parent.children) {
+            int childDepth = getLastChildDepth(child);
+            if (childDepth > depth) {
+                depth = childDepth;
+            }
+        }
+        return depth;
+    }
+
+    @NotNull
     private static Pair<Double, List<SimpleCommandLine>> accept(
             @NotNull SimpleCommandLine parent,
             @NotNull CommandContext context,
@@ -327,9 +339,10 @@ final class SimpleCommandLine implements CommandLine {
                                 acceptedChildren.get(acceptedChildren.size() - 1), context, next, arguments)
                         .getSecond();
             } while (!nextAcceptedChildren.isEmpty());
-            int count = acceptedChildren.size();
-            double score = count * 1.0D / arguments.length;
-            Log.debug(() -> String.format("score: %s / %s = %s", count, arguments.length, score));
+            int hit = acceptedChildren.size();
+            int unhit = getLastChildDepth(acceptedChildren.get(hit - 1)) - hit + 1;
+            double score = hit * 1.0D / arguments.length - unhit;
+            Log.debug(() -> String.format("score: %s / %s - %s = %s", hit, arguments.length, unhit, score));
             if (!accepted.containsKey(score)) {
                 accepted.put(score, acceptedChildren);
             }
