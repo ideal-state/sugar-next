@@ -30,7 +30,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -601,7 +600,8 @@ final class SimpleContext implements Context {
                 Parameter parameter = parameters[i];
                 String parameterName = parameter.getName();
                 Class<?> parameterType = parameter.getType();
-                Class<?> autowireType = getAutowireType(instanceTypeName, methodName, parameterName, parameter.getParameterizedType());
+                Class<?> autowireType =
+                        getAutowireType(instanceTypeName, methodName, parameterName, parameter.getParameterizedType());
                 Object value = null;
                 Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
                 if (Bean.class.equals(parameterType)) {
@@ -685,19 +685,20 @@ final class SimpleContext implements Context {
         Type autowireType = null;
         if (parameterType instanceof Class<?>) {
             autowireType = parameterType;
-            Validation.is(!((Class<?>)autowireType).isArray() && ((Class<?>)autowireType).getTypeParameters().length == 0, String.format(
-                    "Autowire: '%s' method '%s' parameter '%s' must not an array or raw generic type.",
-                    instanceTypeName, methodName, parameterName)
-            );
+            Validation.is(
+                    !((Class<?>) autowireType).isArray() && ((Class<?>) autowireType).getTypeParameters().length == 0,
+                    String.format(
+                            "Autowire: '%s' method '%s' parameter '%s' must not an array or raw generic type.",
+                            instanceTypeName, methodName, parameterName));
         } else if (parameterType instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) parameterType;
-            Class<?> rawType = ((Class<?>)parameterizedType.getRawType());
+            Class<?> rawType = ((Class<?>) parameterizedType.getRawType());
             if (Bean.class.equals(rawType) || Lazy.class.equals(rawType) || List.class.equals(rawType)) {
                 autowireType = parameterizedType.getActualTypeArguments()[0];
             } else if (Map.class.equals(rawType)) {
                 Type[] actualTypes = parameterizedType.getActualTypeArguments();
                 Validation.is(
-                        ((Class<?>)actualTypes[0]).isAssignableFrom(String.class),
+                        ((Class<?>) actualTypes[0]).isAssignableFrom(String.class),
                         String.format(
                                 "Autowire: '%s' method '%s' parameter '%s' key type must be assignable from String.",
                                 instanceTypeName, methodName, parameterName));
