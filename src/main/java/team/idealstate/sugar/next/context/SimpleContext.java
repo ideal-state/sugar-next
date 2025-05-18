@@ -21,6 +21,7 @@ import static team.idealstate.sugar.next.function.Functional.optional;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -62,6 +63,8 @@ import team.idealstate.sugar.banner.Banner;
 import team.idealstate.sugar.bundled.Bundled;
 import team.idealstate.sugar.internal.org.objectweb.asm.ClassReader;
 import team.idealstate.sugar.logging.Log;
+import team.idealstate.sugar.maven.MavenResolver;
+import team.idealstate.sugar.maven.exception.MavenException;
 import team.idealstate.sugar.next.bytecode.Java;
 import team.idealstate.sugar.next.bytecode.JavaCache;
 import team.idealstate.sugar.next.bytecode.api.member.JavaClass;
@@ -741,7 +744,19 @@ final class SimpleContext implements Context {
         getEnvironment();
     }
 
-    private void doInitialize() {}
+    private void doInitialize() {
+        Bundled.release(getHolder().getClass(), getDataFolder(), path -> !MavenResolver.CONFIG_FILE_PATH.equals(path));
+        try {
+            SimpleContextLibraryLoader.loadDependencies(getHolder(), getDataFolder(), getClassLoader());
+        } catch (MavenException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof FileNotFoundException) {
+                Log.warn(cause.getMessage());
+            } else {
+                throw e;
+            }
+        }
+    }
 
     private void doAfterInitialize() {}
 
