@@ -28,6 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.net.URI;
@@ -600,7 +601,7 @@ final class SimpleContext implements Context {
                 Parameter parameter = parameters[i];
                 String parameterName = parameter.getName();
                 Class<?> parameterType = parameter.getType();
-                Class<?> autowireType = getAutowireType(instanceTypeName, methodName, parameterName, parameterType);
+                Class<?> autowireType = getAutowireType(instanceTypeName, methodName, parameterName, parameter.getParameterizedType());
                 Object value = null;
                 Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
                 if (Bean.class.equals(parameterType)) {
@@ -680,92 +681,43 @@ final class SimpleContext implements Context {
 
     @NotNull
     private Class<?> getAutowireType(
-            String instanceTypeName, String methodName, String parameterName, Class<?> parameterType) {
-        Class<?> type = null;
-        if (Bean.class.equals(parameterType) || List.class.equals(parameterType) || Lazy.class.equals(parameterType)) {
-            TypeVariable<? extends Class<?>>[] typeParameters = parameterType.getTypeParameters();
-            Validation.is(
-                    typeParameters.length == 1,
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' must specify one type" + " variable.",
-                            instanceTypeName, methodName, parameterName));
-            Type[] bounds = typeParameters[0].getBounds();
-            for (Type bound : bounds) {
-                if (isArrayOrGenericOrNonClass(bound)) {
-                    continue;
-                }
-                type = (Class<?>) bound;
-                break;
+            String instanceTypeName, String methodName, String parameterName, Type parameterType) {
+        Type autowireType = null;
+        if (parameterType instanceof Class<?>) {
+            autowireType = parameterType;
+            Validation.is(!((Class<?>)autowireType).isArray() && ((Class<?>)autowireType).getTypeParameters().length == 0, String.format(
+                    "Autowire: '%s' method '%s' parameter '%s' must not an array or raw generic type.",
+                    instanceTypeName, methodName, parameterName)
+            );
+        } else if (parameterType instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) parameterType;
+            Class<?> rawType = ((Class<?>)parameterizedType.getRawType());
+            if (Bean.class.equals(rawType) || Lazy.class.equals(rawType) || List.class.equals(rawType)) {
+                autowireType = parameterizedType.getActualTypeArguments()[0];
+            } else if (Map.class.equals(rawType)) {
+                Type[] actualTypes = parameterizedType.getActualTypeArguments();
+                Validation.is(
+                        ((Class<?>)actualTypes[0]).isAssignableFrom(String.class),
+                        String.format(
+                                "Autowire: '%s' method '%s' parameter '%s' key type must be assignable from String.",
+                                instanceTypeName, methodName, parameterName));
+                autowireType = actualTypes[1];
             }
-            Validation.not(
-                    isArrayOrGenericOrNonClass(type),
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' element type must not be an"
-                                    + " array or a generic.",
-                            instanceTypeName, methodName, parameterName));
-        } else if (Map.class.equals(parameterType)) {
-            TypeVariable<? extends Class<?>>[] typeParameters = parameterType.getTypeParameters();
-            Validation.is(
-                    typeParameters.length == 2,
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' must specify two type" + " variables.",
-                            instanceTypeName, methodName, parameterName));
-            TypeVariable<? extends Class<?>> typeVariable = typeParameters[0];
-            for (Type bound : typeVariable.getBounds()) {
-                if (isArrayOrGenericOrNonClass(bound)) {
-                    continue;
-                }
-                type = (Class<?>) bound;
-                break;
-            }
-            Validation.not(
-                    isArrayOrGenericOrNonClass(type),
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' key type must not be an"
-                                    + " array or a generic.",
-                            instanceTypeName, methodName, parameterName));
-            assert type != null;
-            Validation.is(
-                    type.isAssignableFrom(String.class),
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' key type must be assignable" + " from String.",
-                            instanceTypeName, methodName, parameterName));
-            typeVariable = typeParameters[1];
-            type = null;
-            for (Type bound : typeVariable.getBounds()) {
-                if (isArrayOrGenericOrNonClass(bound)) {
-                    continue;
-                }
-                type = (Class<?>) bound;
-                break;
-            }
-            Validation.not(
-                    isArrayOrGenericOrNonClass(type),
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' value type must not be an"
-                                    + " array or a generic.",
-                            instanceTypeName, methodName, parameterName));
-            assert type != null;
-            return type;
         }
-        Validation.not(
-                isArrayOrGenericOrNonClass(parameterType),
+        Validation.is(
+                isNonArrayNonGenericClass(autowireType),
                 String.format(
-                        "Autowire: '%s' method '%s' parameter '%s' must not be an array or a" + " generic.",
+                        "Autowire: '%s' method '%s' parameter '%s' must not be an array or generic type.",
                         instanceTypeName, methodName, parameterName));
-        return parameterType;
+        return (Class<?>) autowireType;
     }
 
-    private boolean isArrayOrGenericOrNonClass(Type type) {
+    private boolean isNonArrayNonGenericClass(Type type) {
         if (!(type instanceof Class)) {
-            return true;
+            return false;
         }
         Class<?> cls = (Class<?>) type;
-        return cls.isArray() || isGeneric(cls);
-    }
-
-    private boolean isGeneric(Class<?> cls) {
-        return cls.getTypeParameters().length != 0;
+        return !cls.isArray() && cls.getTypeParameters().length == 0;
     }
 
     @NotNull
