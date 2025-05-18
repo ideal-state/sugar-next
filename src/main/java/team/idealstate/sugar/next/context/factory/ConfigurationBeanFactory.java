@@ -32,6 +32,9 @@ import java.util.Set;
 import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.ObjectMapper;
 import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.json.JsonMapper;
 import team.idealstate.sugar.internal.com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import team.idealstate.sugar.internal.com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import team.idealstate.sugar.internal.org.yaml.snakeyaml.Yaml;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.context.Context;
@@ -52,11 +55,17 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
     private final Lazy<Yaml> snakeyaml = lazy(Yaml::new);
 
     private static ObjectMapper newYaml(@NotNull Context context) {
-        return new YAMLMapper().registerModules(YAMLMapper.findModules(context.getClassLoader()));
+        return new YAMLMapper()
+                .registerModule(new JavaTimeModule())
+                .registerModule(new ParameterNamesModule())
+                .registerModule(new Jdk8Module());
     }
 
     private static ObjectMapper newJson(@NotNull Context context) {
-        return new JsonMapper().registerModules(JsonMapper.findModules(context.getClassLoader()));
+        return new JsonMapper()
+                .registerModule(new JavaTimeModule())
+                .registerModule(new ParameterNamesModule())
+                .registerModule(new Jdk8Module());
     }
 
     public ConfigurationBeanFactory() {
