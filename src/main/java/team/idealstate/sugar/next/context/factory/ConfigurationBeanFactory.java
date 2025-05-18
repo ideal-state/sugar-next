@@ -50,8 +50,14 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(".yml", ".yaml", ".json")));
 
     private final Lazy<Yaml> snakeyaml = lazy(Yaml::new);
-    private final Lazy<ObjectMapper> yaml = lazy(() -> new YAMLMapper().findAndRegisterModules());
-    private final Lazy<ObjectMapper> json = lazy(() -> new JsonMapper().findAndRegisterModules());
+
+    private static ObjectMapper newYaml(@NotNull Context context) {
+        return new YAMLMapper().registerModules(YAMLMapper.findModules(context.getClassLoader()));
+    }
+
+    private static ObjectMapper newJson(@NotNull Context context) {
+        return new JsonMapper().registerModules(JsonMapper.findModules(context.getClassLoader()));
+    }
 
     public ConfigurationBeanFactory() {
         super(Configuration.class);
@@ -167,9 +173,9 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
             }
             return (T) functional(resource).use(Object.class, input -> {
                 if (extension.equals(".yml") || extension.equals(".yaml")) {
-                    return yaml.get().convertValue(snakeyaml.get().load(input), marked);
+                    return newYaml(context).convertValue(snakeyaml.get().load(input), marked);
                 } else if (extension.equals(".json")) {
-                    return json.get().readValue(input, marked);
+                    return newJson(context).readValue(input, marked);
                 }
                 throw new ContextException(String.format(
                         "%s: Unsupported file configuration extension '%s'.",
