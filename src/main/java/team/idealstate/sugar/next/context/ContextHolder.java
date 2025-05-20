@@ -17,6 +17,7 @@
 package team.idealstate.sugar.next.context;
 
 import java.io.File;
+import team.idealstate.sugar.validate.annotation.NotNull;
 
 public interface ContextHolder {
 
@@ -25,4 +26,7 @@ public interface ContextHolder {
     String getVersion();
 
     File getDataFolder();
+
+    @NotNull
+    Context getContext();
 }
