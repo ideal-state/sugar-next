@@ -506,13 +506,12 @@ final class SimpleContext implements Context {
             T instance = beanFactory.create(this, beanName, metadata, marked);
             result = instance;
             Validation.notNull(instance, "Instance must not be null.");
-            Class<?> instanceType = instance.getClass();
             Validation.is(
                     marked.isInstance(instance),
-                    String.format("Instance '%s' must be an instance of '%s'.", instanceType, marked));
+                    String.format("Instance '%s' must be an instance of '%s'.", marked, marked));
             Log.debug(() -> String.format(
                     "(%s ms) created instance. (beanName='%s', instanceType='%s')",
-                    System.currentTimeMillis() - start[1], beanName, instanceType));
+                    System.currentTimeMillis() - start[1], beanName, marked));
             if (instance instanceof Aware) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("inject aware. (beanName='%s')", beanName));
@@ -537,12 +536,12 @@ final class SimpleContext implements Context {
                 Log.debug(() -> String.format(
                         "(%s ms) injected aware. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
             }
-            Method[] methods = instanceType.getMethods();
+            Method[] methods = marked.getMethods();
             T proxy;
             if (methods.length != 0) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("autowire methods. (beanName='%s')", beanName));
-                doAutowire(instance, instanceType, methods);
+                doAutowire(instance, marked, methods);
                 Log.debug(() -> String.format(
                         "(%s ms) autowired methods. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
                 start[1] = System.currentTimeMillis();
