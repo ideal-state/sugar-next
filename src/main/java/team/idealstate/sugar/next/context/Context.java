@@ -109,6 +109,12 @@ public interface Context {
             @NotNull Class<M> metadataType, @NotNull BeanFactory<M> beanFactory);
 
     @Nullable
+    @SuppressWarnings("unchecked")
+    default <T> Bean<T> getBean(@NotNull String beanName) {
+        return (Bean<T>) getBean(beanName, Object.class);
+    }
+
+    @Nullable
     <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType);
 
     @Nullable
