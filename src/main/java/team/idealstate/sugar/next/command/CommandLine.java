@@ -47,7 +47,7 @@ public interface CommandLine {
                 }
                 header = false;
             }
-            if (!(('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9'))) {
+            if (!(('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_' || c == '-')) {
                 throw new IllegalArgumentException(parameterName + " must contain only English letters and numbers.");
             }
         }
