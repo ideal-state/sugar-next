@@ -502,6 +502,21 @@ final class SimpleContext implements Context {
                 throw new IllegalStateException(String.format(
                         "circular dependency detected. (beanName='%s', marked='%s') %s", beanName, marked, inProgress));
             }
+            if (dependsOn != null) {
+                String[] beans = dependsOn.beans();
+                Log.debug(() -> "creating depend beans.");
+                for (String name : beans) {
+                    Bean<Object> bean = getBean(name);
+                    Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                    if (Scope.SINGLETON.equals(bean.getScope().value())) {
+                        bean.getInstance();
+                    }
+                }
+                Log.debug(() -> String.format(
+                        "(%s ms) created depend beans. (dependBeans='%s')",
+                        System.currentTimeMillis() - start[1], Arrays.toString(beans)));
+                start[1] = System.currentTimeMillis();
+            }
             Log.debug(() -> String.format("create instance. (beanName='%s', metadata='%s')", beanName, metadata));
             T instance = beanFactory.create(this, beanName, metadata, marked);
             result = instance;
