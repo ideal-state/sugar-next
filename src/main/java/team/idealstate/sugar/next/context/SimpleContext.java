@@ -775,6 +775,10 @@ final class SimpleContext implements Context {
     private void doAfterInitialize() {}
 
     private void doBeforeLoad() {
+        Class<? extends ContextHolder> owner = getHolder().getClass();
+        Banner.lines(owner).forEach(Log::info);
+        Log.info(String.format("Environment: '%s'", getEnvironment()));
+        Bundled.release(owner, getDataFolder());
         registerBeanFactory(Component.class, new ComponentBeanFactory());
         registerBeanFactory(Configuration.class, new ConfigurationBeanFactory());
     }
@@ -783,9 +787,6 @@ final class SimpleContext implements Context {
     private void doLoad() throws Throwable {
         ContextHolder holder = getHolder();
         Class<? extends ContextHolder> owner = holder.getClass();
-        Banner.lines(owner).forEach(Log::info);
-        Log.info(String.format("Environment: '%s'", getEnvironment()));
-        Bundled.release(owner, getDataFolder());
         Set<String> scanPackages = loadBoots(holder);
         Set<File> bootFiles = loadBootFiles(holder);
         long[] start = {System.currentTimeMillis()};
