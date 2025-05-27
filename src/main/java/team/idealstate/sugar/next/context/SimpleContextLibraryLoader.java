@@ -19,6 +19,7 @@ package team.idealstate.sugar.next.context;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -27,6 +28,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.CodeSource;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -177,33 +179,92 @@ final class SimpleContextLibraryLoader {
                     .toString();
             try {
                 appendToClassLoaderSearch(classLoader, id, artifactFile);
-            } catch (MalformedURLException | InvocationTargetException | IllegalAccessException e) {
+            } catch (MalformedURLException | ReflectiveOperationException e) {
                 throw new ContextException(e);
             }
         }
     }
 
-    private static final Method ADD_URL;
-
-    static {
-        try {
-            ADD_URL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            ADD_URL.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private static void appendToClassLoaderSearch(ClassLoader classLoader, String id, File file)
-            throws MalformedURLException, InvocationTargetException, IllegalAccessException {
+            throws MalformedURLException, ReflectiveOperationException {
         if (file != null && file.exists()) {
             if (classLoader instanceof URLClassLoader) {
-                ADD_URL.invoke(classLoader, file.toURI().toURL());
+                addURL((URLClassLoader) classLoader, file.toURI().toURL());
                 Log.info(() -> String.format("Append to context classpath: '%s'", id));
             } else if (Javaagent.isLoaded()) {
                 Javaagent.appendToSystemClassLoaderSearch(Collections.singletonMap(id, file));
             } else {
                 throw new ContextException(String.format("Class loader '%s' is not supported.", classLoader));
+            }
+        }
+    }
+
+    private static volatile Object unsafe = null;
+    private static volatile Method objectFieldOffset = null;
+    private static volatile Method getReference = null;
+    private static volatile Method getBoolean = null;
+    private static volatile Long ucpOffset = null;
+    private static volatile Long closedOffset = null;
+    private static volatile Long unopenedUrlsOffset = null;
+    private static volatile Long pathOffset = null;
+    private static volatile Method addUrl = null;
+
+    private static void addURL(URLClassLoader ucl, URL url) throws ReflectiveOperationException {
+        Class<?> unsafeClass;
+        try {
+            unsafeClass = Class.forName("jdk.internal.misc.Unsafe");
+        } catch (ClassNotFoundException e) {
+            if (addUrl == null) {
+                addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                addUrl.setAccessible(true);
+            }
+            addUrl.invoke(ucl, url);
+            return;
+        }
+        if (unsafe == null) {
+            Field theUnsafe = unsafeClass.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            unsafe = theUnsafe.get(null);
+        }
+        if (objectFieldOffset == null) {
+            objectFieldOffset = unsafeClass.getDeclaredMethod("objectFieldOffset", Class.class, String.class);
+        }
+        if (getReference == null) {
+            getReference = unsafeClass.getDeclaredMethod("getReference", Object.class, long.class);
+        }
+        if (getBoolean == null) {
+            getBoolean = unsafeClass.getDeclaredMethod("getBoolean", Object.class, long.class);
+        }
+        if (ucpOffset == null) {
+            ucpOffset = (Long) objectFieldOffset.invoke(unsafe, URLClassLoader.class, "ucp");
+        }
+        addURL(getReference.invoke(unsafe, ucl, ucpOffset), url);
+    }
+
+    @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
+    private static void addURL(Object ucp, URL url) throws InvocationTargetException, IllegalAccessException {
+        Class<?> ucpClass = ucp.getClass();
+        if (closedOffset == null) {
+            closedOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "closed");
+        }
+        if ((boolean) getBoolean.invoke(unsafe, ucp, closedOffset)) {
+            return;
+        }
+        if (unopenedUrlsOffset == null) {
+            unopenedUrlsOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "unopenedURLs");
+        }
+        Collection<URL> unopenedUrls = (Collection<URL>) getReference.invoke(unsafe, ucp, unopenedUrlsOffset);
+        if ((boolean) getBoolean.invoke(unsafe, ucp, closedOffset)) {
+            return;
+        }
+        synchronized (unopenedUrls) {
+            if (pathOffset == null) {
+                pathOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "path");
+            }
+            Collection<URL> path = (Collection<URL>) getReference.invoke(unsafe, ucp, pathOffset);
+            if (!path.contains(url)) {
+                unopenedUrls.add(url);
+                path.add(url);
             }
         }
     }
