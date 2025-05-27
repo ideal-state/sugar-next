@@ -67,7 +67,8 @@ final class SimpleContextLibraryLoader {
         if (mavenResolver == null) {
             synchronized (SimpleContextLibraryLoader.class) {
                 if (mavenResolver == null) {
-                    MavenResolverLoader mavenResolverLoader = MavenResolverLoader.instance(MAVEN_RESOLVER_LOADER_NAME);
+                    MavenResolverLoader mavenResolverLoader =
+                            MavenResolverLoader.instance(MAVEN_RESOLVER_LOADER_NAME, classLoader);
                     File configurationFile = new File(dataFolder, MAVEN_RESOLVER_CONFIG_PATH);
                     MavenResolver resolver = mavenResolverLoader.load(configurationFile, classLoader);
                     DependencyResolver dependencyResolver = resolver.getDependencyResolver();
