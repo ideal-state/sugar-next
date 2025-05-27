@@ -16,6 +16,20 @@
 
 package team.idealstate.sugar.next.context;
 
+import team.idealstate.sugar.Sugar;
+import team.idealstate.sugar.agent.Javaagent;
+import team.idealstate.sugar.exception.SugarException;
+import team.idealstate.sugar.logging.Log;
+import team.idealstate.sugar.maven.resolver.api.Dependency;
+import team.idealstate.sugar.maven.resolver.api.DependencyResolver;
+import team.idealstate.sugar.maven.resolver.api.MavenResolver;
+import team.idealstate.sugar.maven.resolver.api.ResolvedArtifact;
+import team.idealstate.sugar.maven.resolver.spi.MavenResolverLoader;
+import team.idealstate.sugar.next.context.annotation.feature.EnableSugar;
+import team.idealstate.sugar.next.context.exception.ContextException;
+import team.idealstate.sugar.validate.Validation;
+import team.idealstate.sugar.validate.annotation.NotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,37 +41,38 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.CodeSource;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import team.idealstate.sugar.Sugar;
-import team.idealstate.sugar.exception.SugarException;
-import team.idealstate.sugar.internal.org.eclipse.aether.graph.Dependency;
-import team.idealstate.sugar.logging.Log;
-import team.idealstate.sugar.maven.MavenResolver;
-import team.idealstate.sugar.maven.PomXmlResolver;
-import team.idealstate.sugar.next.context.annotation.feature.EnableSugar;
-import team.idealstate.sugar.next.context.exception.ContextException;
-import team.idealstate.sugar.validate.Validation;
-import team.idealstate.sugar.validate.annotation.NotNull;
 
 final class SimpleContextLibraryLoader {
 
+    static final String MAVEN_RESOLVER_CONFIG_PATH = "maven/config.xml";
+    private static final String MAVEN_RESOLVER_LOADER_NAME = "simple";
+    private static final String SUGAR_MAVEN_RESOLVER_DEPENDENCY_ID = "team.idealstate.sugar:sugar-maven-resolver:0.1.0-SNAPSHOT";
     private static volatile MavenResolver mavenResolver;
 
     @NotNull
-    private static MavenResolver getMavenResolver(@NotNull File dataFolder) {
+    private static MavenResolver getMavenResolver(@NotNull File dataFolder, @NotNull ClassLoader classLoader) {
         if (mavenResolver == null) {
             synchronized (SimpleContextLibraryLoader.class) {
                 if (mavenResolver == null) {
-                    mavenResolver = new MavenResolver(dataFolder);
+                    MavenResolverLoader mavenResolverLoader = MavenResolverLoader.instance(MAVEN_RESOLVER_LOADER_NAME);
+                    File configurationFile = new File(dataFolder, MAVEN_RESOLVER_CONFIG_PATH);
+                    MavenResolver resolver = mavenResolverLoader.load(configurationFile, classLoader);
+                    DependencyResolver dependencyResolver = resolver.getDependencyResolver();
+                    Dependency dependency = dependencyResolver.resolve(SUGAR_MAVEN_RESOLVER_DEPENDENCY_ID);
+                    List<ResolvedArtifact> artifacts = resolver.resolve(Collections.singletonList(dependency));
+                    appendToClassLoaderSearch(classLoader, dependencyResolver.getIdDelimiter(), artifacts);
+                    mavenResolver = mavenResolverLoader.load(configurationFile, classLoader);
                 }
             }
         }
@@ -91,6 +106,8 @@ final class SimpleContextLibraryLoader {
             throw new ContextException(e);
         }
         Set<Dependency> dependencies = new LinkedHashSet<>(128);
+        MavenResolver mavenResolver = null;
+        DependencyResolver dependencyResolver = null;
         try (JarFile jar = new JarFile(file)) {
             Manifest manifest = jar.getManifest();
             if (manifest == null) {
@@ -112,12 +129,18 @@ final class SimpleContextLibraryLoader {
                 if (entry.isDirectory() || !entryName.equals(pomPath)) {
                     continue;
                 }
+                if (mavenResolver == null) {
+                    mavenResolver = getMavenResolver(dataFolder, classLoader);
+                }
+                if (dependencyResolver == null) {
+                    dependencyResolver = mavenResolver.getDependencyResolver();
+                }
                 try (InputStream input = jar.getInputStream(entry)) {
-                    List<Dependency> resolve = PomXmlResolver.resolve(input);
-                    if (resolve.isEmpty()) {
+                    List<? extends Dependency> resolved = mavenResolver.getDependencyResolver().resolvePom(input);
+                    if (resolved.isEmpty()) {
                         continue;
                     }
-                    dependencies.addAll(resolve);
+                    dependencies.addAll(resolved);
                 }
             }
         } catch (IOException e) {
@@ -126,27 +149,30 @@ final class SimpleContextLibraryLoader {
         if (dependencies.isEmpty()) {
             return;
         }
-        MavenResolver mavenResolver = getMavenResolver(dataFolder);
-        Map<String, File> artifacts =
-                MavenResolver.notMissingOrEx(mavenResolver.resolve(new ArrayList<>(dependencies)));
-        if (artifacts.isEmpty()) {
-            return;
-        }
+        List<ResolvedArtifact> artifacts = mavenResolver.resolve(new ArrayList<>(dependencies));
+        appendToClassLoaderSearch(classLoader, dependencyResolver.getIdDelimiter(), artifacts);
+    }
+
+    private static void appendToClassLoaderSearch(@NotNull ClassLoader classLoader, @NotNull String dependencyIdDelimiter, @NotNull List<ResolvedArtifact> artifacts) {
         Set<String> loaded = new HashSet<>(artifacts.size());
-        for (Map.Entry<String, File> entry : artifacts.entrySet()) {
-            File artifact = entry.getValue();
-            if (artifact.isDirectory() || !artifact.getName().endsWith(".jar")) {
+        for (ResolvedArtifact artifact : artifacts) {
+            File artifactFile = artifact.getFile();
+            if (artifactFile.isDirectory() || !artifactFile.getName().endsWith(".jar")) {
                 continue;
             }
-            String path = artifact.toPath().normalize().toString();
+            String path = artifactFile.toPath().normalize().toString();
             if (!loaded.add(path)) {
                 continue;
             }
-            String id = entry.getKey();
+            String id = new StringJoiner(dependencyIdDelimiter)
+                    .add(artifact.getGroupId())
+                    .add(artifact.getArtifactId())
+                    .add(artifact.getExtension())
+                    .add(artifact.getClassifier())
+                    .add(artifact.getVersion())
+                    .toString();
             try {
-                if (appendToURLClassLoaderSearch((URLClassLoader) classLoader, artifact)) {
-                    Log.info(() -> String.format("Append to context classpath: '%s'", id));
-                }
+                appendToClassLoaderSearch(classLoader, id, artifactFile);
             } catch (MalformedURLException | InvocationTargetException | IllegalAccessException e) {
                 throw new ContextException(e);
             }
@@ -164,12 +190,17 @@ final class SimpleContextLibraryLoader {
         }
     }
 
-    private static boolean appendToURLClassLoaderSearch(URLClassLoader urlClassLoader, File file)
+    private static void appendToClassLoaderSearch(ClassLoader classLoader, String id, File file)
             throws MalformedURLException, InvocationTargetException, IllegalAccessException {
         if (file != null && file.exists()) {
-            ADD_URL.invoke(urlClassLoader, file.toURI().toURL());
-            return true;
+            if (classLoader instanceof URLClassLoader) {
+                ADD_URL.invoke(classLoader, file.toURI().toURL());
+                Log.info(() -> String.format("Append to context classpath: '%s'", id));
+            } else if (Javaagent.isLoaded()) {
+                Javaagent.appendToSystemClassLoaderSearch(Collections.singletonMap(id, file));
+            } else {
+                throw new ContextException(String.format("Class loader '%s' is not supported.", classLoader));
+            }
         }
-        return false;
     }
 }

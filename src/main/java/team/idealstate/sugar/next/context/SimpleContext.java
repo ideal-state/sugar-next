@@ -63,7 +63,6 @@ import team.idealstate.sugar.banner.Banner;
 import team.idealstate.sugar.bundled.Bundled;
 import team.idealstate.sugar.internal.org.objectweb.asm.ClassReader;
 import team.idealstate.sugar.logging.Log;
-import team.idealstate.sugar.maven.MavenResolver;
 import team.idealstate.sugar.maven.exception.MavenException;
 import team.idealstate.sugar.next.bytecode.Java;
 import team.idealstate.sugar.next.bytecode.JavaCache;
@@ -759,7 +758,7 @@ final class SimpleContext implements Context {
     }
 
     private void doInitialize() {
-        Bundled.release(getHolder().getClass(), getDataFolder(), path -> !MavenResolver.CONFIG_FILE_PATH.equals(path));
+        Bundled.release(getHolder().getClass(), getDataFolder(), path -> !SimpleContextLibraryLoader.MAVEN_RESOLVER_CONFIG_PATH.equals(path));
         try {
             SimpleContextLibraryLoader.loadDependencies(getHolder(), getDataFolder(), getClassLoader());
         } catch (MavenException e) {
