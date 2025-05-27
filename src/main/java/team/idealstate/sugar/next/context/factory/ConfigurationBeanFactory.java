@@ -17,30 +17,22 @@
 package team.idealstate.sugar.next.context.factory;
 
 import static team.idealstate.sugar.next.function.Functional.functional;
-import static team.idealstate.sugar.next.function.Functional.lazy;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.ObjectMapper;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.databind.json.JsonMapper;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import team.idealstate.sugar.internal.com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import team.idealstate.sugar.internal.org.yaml.snakeyaml.Yaml;
+import java.util.List;
 import team.idealstate.sugar.logging.Log;
+import team.idealstate.sugar.next.context.Bean;
 import team.idealstate.sugar.next.context.Context;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
+import team.idealstate.sugar.next.context.annotation.component.Serialization;
 import team.idealstate.sugar.next.context.exception.ContextException;
-import team.idealstate.sugar.next.function.Lazy;
+import team.idealstate.sugar.next.databind.codec.Codec;
 import team.idealstate.sugar.next.io.IOUtils;
 import team.idealstate.sugar.string.StringUtils;
 import team.idealstate.sugar.validate.Validation;
@@ -48,25 +40,6 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 import team.idealstate.sugar.validate.annotation.Nullable;
 
 public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration> {
-
-    public static final Set<String> SUPPORTED_FILE_EXTENSIONS =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(".yml", ".yaml", ".json")));
-
-    private final Lazy<Yaml> snakeyaml = lazy(Yaml::new);
-
-    private static ObjectMapper newYaml(@NotNull Context context) {
-        return new YAMLMapper()
-                .registerModule(new JavaTimeModule())
-                .registerModule(new ParameterNamesModule())
-                .registerModule(new Jdk8Module());
-    }
-
-    private static ObjectMapper newJson(@NotNull Context context) {
-        return new JsonMapper()
-                .registerModule(new JavaTimeModule())
-                .registerModule(new ParameterNamesModule())
-                .registerModule(new Jdk8Module());
-    }
 
     public ConfigurationBeanFactory() {
         super(Configuration.class);
@@ -87,14 +60,39 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                     getMetadataType().getSimpleName(), uri, e.getMessage()));
             return false;
         }
-        if (!SUPPORTED_FILE_EXTENSIONS.contains(uri.substring(uri.lastIndexOf('.')))) {
+        List<Bean<Codec>> beans = context.getBeans(Codec.class);
+        if (beans.isEmpty()) {
+            throw new ContextException(String.format(
+                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), marked.getName()));
+        }
+        String extension = uri.substring(uri.lastIndexOf('.') + 1);
+        String release = metadata.release().replace("\\", "/");
+        String releaseExtension = release.substring(release.lastIndexOf('.') + 1);
+        boolean isSupported = false;
+        boolean isSupportedRelease = false;
+        for (Bean<Codec> bean : beans) {
+            Annotation annotation = bean.getMetadata();
+            if (!(annotation instanceof Serialization)) {
+                continue;
+            }
+            String support = ((Serialization) annotation).value();
+            if (!isSupported && support.equals(extension)) {
+                isSupported = true;
+            }
+            if (!isSupportedRelease && support.equals(releaseExtension)) {
+                isSupportedRelease = true;
+            }
+            if (isSupported && isSupportedRelease) {
+                break;
+            }
+        }
+        if (!isSupported) {
             Log.warn(String.format(
                     "%s: Invalid configuration extension '%s'.",
                     getMetadataType().getSimpleName(), uri));
             return false;
         }
-        String release = metadata.release().replace("\\", "/");
-        if (!SUPPORTED_FILE_EXTENSIONS.contains(release.substring(release.lastIndexOf('.')))) {
+        if (!isSupportedRelease) {
             Log.warn(String.format(
                     "%s: Invalid configuration extension '%s'.",
                     getMetadataType().getSimpleName(), release));
@@ -180,16 +178,19 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                                 getMetadataType().getSimpleName(), uri));
                 extension = uri.substring(uri.lastIndexOf('.'));
             }
-            return (T) functional(resource).use(Object.class, input -> {
-                if (extension.equals(".yml") || extension.equals(".yaml")) {
-                    return newYaml(context).convertValue(snakeyaml.get().load(input), marked);
-                } else if (extension.equals(".json")) {
-                    return newJson(context).readValue(input, marked);
+            List<Bean<Codec>> beans = context.getBeans(Codec.class);
+            for (Bean<Codec> bean : beans) {
+                Annotation annotation = bean.getMetadata();
+                if (!(annotation instanceof Serialization)) {
+                    continue;
                 }
-                throw new ContextException(String.format(
-                        "%s: Unsupported file configuration extension '%s'.",
-                        getMetadataType().getSimpleName(), extension));
-            });
+                Codec codec = bean.getInstance();
+                if (((Serialization) annotation).value().equals(extension)) {
+                    return (T) functional(resource).use(Object.class, input -> codec.deserialize(input, marked));
+                }
+            }
+            throw new ContextException(String.format(
+                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), marked.getName()));
         } catch (IOException e) {
             throw new ContextException(e);
         }
