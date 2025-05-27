@@ -71,6 +71,7 @@ import team.idealstate.sugar.next.bytecode.api.struct.JavaAnnotation;
 import team.idealstate.sugar.next.bytecode.exception.BytecodeParsingException;
 import team.idealstate.sugar.next.context.annotation.component.Component;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
+import team.idealstate.sugar.next.context.annotation.component.Serialization;
 import team.idealstate.sugar.next.context.annotation.feature.Autowired;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Environment;
@@ -93,6 +94,7 @@ import team.idealstate.sugar.next.context.aware.SelfAware;
 import team.idealstate.sugar.next.context.exception.ContextException;
 import team.idealstate.sugar.next.context.factory.ComponentBeanFactory;
 import team.idealstate.sugar.next.context.factory.ConfigurationBeanFactory;
+import team.idealstate.sugar.next.context.factory.SerializationBeanFactory;
 import team.idealstate.sugar.next.context.lifecycle.Destroyable;
 import team.idealstate.sugar.next.context.lifecycle.Initializable;
 import team.idealstate.sugar.next.databind.Property;
@@ -782,6 +784,7 @@ final class SimpleContext implements Context {
         Log.info(String.format("Environment: '%s'", getEnvironment()));
         Bundled.release(owner, getDataFolder());
         registerBeanFactory(Component.class, new ComponentBeanFactory());
+        registerBeanFactory(Serialization.class, new SerializationBeanFactory());
         registerBeanFactory(Configuration.class, new ConfigurationBeanFactory());
     }
 
