@@ -758,7 +758,10 @@ final class SimpleContext implements Context {
     }
 
     private void doInitialize() {
-        Bundled.release(getHolder().getClass(), getDataFolder(), path -> !SimpleContextLibraryLoader.MAVEN_RESOLVER_CONFIG_PATH.equals(path));
+        Bundled.release(
+                getHolder().getClass(),
+                getDataFolder(),
+                path -> !SimpleContextLibraryLoader.MAVEN_RESOLVER_CONFIG_PATH.equals(path));
         try {
             SimpleContextLibraryLoader.loadDependencies(getHolder(), getDataFolder(), getClassLoader());
         } catch (MavenException e) {

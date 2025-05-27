@@ -16,20 +16,6 @@
 
 package team.idealstate.sugar.next.context;
 
-import team.idealstate.sugar.Sugar;
-import team.idealstate.sugar.agent.Javaagent;
-import team.idealstate.sugar.exception.SugarException;
-import team.idealstate.sugar.logging.Log;
-import team.idealstate.sugar.maven.resolver.api.Dependency;
-import team.idealstate.sugar.maven.resolver.api.DependencyResolver;
-import team.idealstate.sugar.maven.resolver.api.MavenResolver;
-import team.idealstate.sugar.maven.resolver.api.ResolvedArtifact;
-import team.idealstate.sugar.maven.resolver.spi.MavenResolverLoader;
-import team.idealstate.sugar.next.context.annotation.feature.EnableSugar;
-import team.idealstate.sugar.next.context.exception.ContextException;
-import team.idealstate.sugar.validate.Validation;
-import team.idealstate.sugar.validate.annotation.NotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,12 +38,26 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import team.idealstate.sugar.Sugar;
+import team.idealstate.sugar.agent.Javaagent;
+import team.idealstate.sugar.exception.SugarException;
+import team.idealstate.sugar.logging.Log;
+import team.idealstate.sugar.maven.resolver.api.Dependency;
+import team.idealstate.sugar.maven.resolver.api.DependencyResolver;
+import team.idealstate.sugar.maven.resolver.api.MavenResolver;
+import team.idealstate.sugar.maven.resolver.api.ResolvedArtifact;
+import team.idealstate.sugar.maven.resolver.spi.MavenResolverLoader;
+import team.idealstate.sugar.next.context.annotation.feature.EnableSugar;
+import team.idealstate.sugar.next.context.exception.ContextException;
+import team.idealstate.sugar.validate.Validation;
+import team.idealstate.sugar.validate.annotation.NotNull;
 
 final class SimpleContextLibraryLoader {
 
     static final String MAVEN_RESOLVER_CONFIG_PATH = "maven/config.xml";
     private static final String MAVEN_RESOLVER_LOADER_NAME = "simple";
-    private static final String SUGAR_MAVEN_RESOLVER_DEPENDENCY_ID = "team.idealstate.sugar:sugar-maven-resolver:0.1.0-SNAPSHOT";
+    private static final String SUGAR_MAVEN_RESOLVER_DEPENDENCY_ID =
+            "team.idealstate.sugar:sugar-maven-resolver:0.1.0-SNAPSHOT";
     private static volatile MavenResolver mavenResolver;
 
     @NotNull
@@ -136,7 +136,8 @@ final class SimpleContextLibraryLoader {
                     dependencyResolver = mavenResolver.getDependencyResolver();
                 }
                 try (InputStream input = jar.getInputStream(entry)) {
-                    List<? extends Dependency> resolved = mavenResolver.getDependencyResolver().resolvePom(input);
+                    List<? extends Dependency> resolved =
+                            mavenResolver.getDependencyResolver().resolvePom(input);
                     if (resolved.isEmpty()) {
                         continue;
                     }
@@ -153,7 +154,10 @@ final class SimpleContextLibraryLoader {
         appendToClassLoaderSearch(classLoader, dependencyResolver.getIdDelimiter(), artifacts);
     }
 
-    private static void appendToClassLoaderSearch(@NotNull ClassLoader classLoader, @NotNull String dependencyIdDelimiter, @NotNull List<ResolvedArtifact> artifacts) {
+    private static void appendToClassLoaderSearch(
+            @NotNull ClassLoader classLoader,
+            @NotNull String dependencyIdDelimiter,
+            @NotNull List<ResolvedArtifact> artifacts) {
         Set<String> loaded = new HashSet<>(artifacts.size());
         for (ResolvedArtifact artifact : artifacts) {
             File artifactFile = artifact.getFile();
