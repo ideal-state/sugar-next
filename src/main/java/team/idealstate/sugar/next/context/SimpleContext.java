@@ -917,10 +917,6 @@ final class SimpleContext implements Context {
                         }
                     }
                 }
-                if (!beanFactory.validate(this, beanName, metadata, marked)) {
-                    Log.warn(String.format("Bean factory '%s' rejects bean '%s'.", beanFactory.getClass(), marked));
-                    continue;
-                }
                 Provider<Object> provider;
                 Scope scope = marked.getAnnotation(Scope.class);
                 if (scope == null) {
