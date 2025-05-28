@@ -213,6 +213,7 @@ final class SimpleContextLibraryLoader {
     private static void addURL(URLClassLoader ucl, URL url) throws ReflectiveOperationException {
         Class<?> unsafeClass;
         try {
+            Class.forName("jdk.internal.misc.Unsafe");
             unsafeClass = Class.forName("sun.misc.Unsafe");
         } catch (ClassNotFoundException e) {
             if (addUrl == null) {
