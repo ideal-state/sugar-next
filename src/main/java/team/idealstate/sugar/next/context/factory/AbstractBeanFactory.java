@@ -44,13 +44,13 @@ public abstract class AbstractBeanFactory<M extends Annotation> implements BeanF
     public final boolean validate(
             @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> marked) {
         Validation.notNull(context, "Context must not be null.");
-        Validation.notNullOrBlank(beanName, "beanName must not be null or blank.");
+        Validation.notNullOrBlank(beanName, "Bean name must not be null or blank.");
         Validation.notNull(metadata, "Metadata must not be null.");
         Validation.notNull(marked, "Marked must not be null.");
         Class<M> metadataType = getMetadataType();
         Validation.is(
                 metadataType.isInstance(metadata),
-                String.format("metadata '%s' must be an instance of metadataType '%s'.", metadata, metadataType));
+                String.format("Metadata '%s' must be an instance of metadataType '%s'.", metadata, metadataType));
         return doValidate(context, beanName, metadata, marked);
     }
 
@@ -62,7 +62,9 @@ public abstract class AbstractBeanFactory<M extends Annotation> implements BeanF
     @Override
     public final <T> T create(
             @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked) {
-        Validation.is(validate(context, beanName, metadata, marked), "instance cannot be created.");
+        Validation.is(
+                validate(context, beanName, metadata, marked),
+                String.format("Instance of '%s' cannot be created.", marked.getName()));
         T instance = doCreate(context, beanName, metadata, marked);
         Validation.notNull(instance, "Instance must not be null.");
         Validation.is(
