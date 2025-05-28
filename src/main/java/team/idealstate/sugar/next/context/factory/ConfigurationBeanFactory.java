@@ -169,14 +169,14 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                     Files.write(file.toPath(), IOUtils.readAllBytes(resource));
                     resource = Files.newInputStream(file.toPath());
                 }
-                extension = release.substring(release.lastIndexOf('.'));
+                extension = release.substring(release.lastIndexOf('.') + 1);
             } else {
                 Validation.notNull(
                         resource,
                         String.format(
                                 "%s: Resource '%s' not found.",
                                 getMetadataType().getSimpleName(), uri));
-                extension = uri.substring(uri.lastIndexOf('.'));
+                extension = uri.substring(uri.lastIndexOf('.') + 1);
             }
             List<Bean<Codec>> beans = context.getBeans(Codec.class);
             for (Bean<Codec> bean : beans) {
