@@ -213,7 +213,7 @@ final class SimpleContextLibraryLoader {
     private static void addURL(URLClassLoader ucl, URL url) throws ReflectiveOperationException {
         Class<?> unsafeClass;
         try {
-            unsafeClass = Class.forName("jdk.internal.misc.Unsafe");
+            unsafeClass = Class.forName("sun.misc.Unsafe");
         } catch (ClassNotFoundException e) {
             if (addUrl == null) {
                 addUrl = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
@@ -228,31 +228,32 @@ final class SimpleContextLibraryLoader {
             unsafe = theUnsafe.get(null);
         }
         if (objectFieldOffset == null) {
-            objectFieldOffset = unsafeClass.getDeclaredMethod("objectFieldOffset", Class.class, String.class);
+            objectFieldOffset = unsafeClass.getDeclaredMethod("objectFieldOffset", Field.class);
         }
         if (getReference == null) {
-            getReference = unsafeClass.getDeclaredMethod("getReference", Object.class, long.class);
+            getReference = unsafeClass.getDeclaredMethod("getObject", Object.class, long.class);
         }
         if (getBoolean == null) {
             getBoolean = unsafeClass.getDeclaredMethod("getBoolean", Object.class, long.class);
         }
         if (ucpOffset == null) {
-            ucpOffset = (Long) objectFieldOffset.invoke(unsafe, URLClassLoader.class, "ucp");
+            ucpOffset = (Long) objectFieldOffset.invoke(unsafe, URLClassLoader.class.getDeclaredField("ucp"));
         }
         addURL(getReference.invoke(unsafe, ucl, ucpOffset), url);
     }
 
     @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
-    private static void addURL(Object ucp, URL url) throws InvocationTargetException, IllegalAccessException {
+    private static void addURL(Object ucp, URL url)
+            throws InvocationTargetException, IllegalAccessException, NoSuchFieldException {
         Class<?> ucpClass = ucp.getClass();
         if (closedOffset == null) {
-            closedOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "closed");
+            closedOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass.getDeclaredField("closed"));
         }
         if ((boolean) getBoolean.invoke(unsafe, ucp, closedOffset)) {
             return;
         }
         if (unopenedUrlsOffset == null) {
-            unopenedUrlsOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "unopenedURLs");
+            unopenedUrlsOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass.getDeclaredField("unopenedUrls"));
         }
         Collection<URL> unopenedUrls = (Collection<URL>) getReference.invoke(unsafe, ucp, unopenedUrlsOffset);
         if ((boolean) getBoolean.invoke(unsafe, ucp, closedOffset)) {
@@ -260,7 +261,7 @@ final class SimpleContextLibraryLoader {
         }
         synchronized (unopenedUrls) {
             if (pathOffset == null) {
-                pathOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass, "path");
+                pathOffset = (Long) objectFieldOffset.invoke(unsafe, ucpClass.getDeclaredField("path"));
             }
             Collection<URL> path = (Collection<URL>) getReference.invoke(unsafe, ucp, pathOffset);
             if (!path.contains(url)) {
