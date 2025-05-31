@@ -160,9 +160,12 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                 assert resource != null;
                 File file = getFile(context, uri);
                 if (file != null) {
-                    if (!file.exists()) {
+                    File parentFile = file.getParentFile();
+                    if (!parentFile.exists()) {
                         //noinspection ResultOfMethodCallIgnored
-                        file.getParentFile().mkdirs();
+                        parentFile.mkdirs();
+                    }
+                    if (!file.exists()) {
                         //noinspection ResultOfMethodCallIgnored
                         file.createNewFile();
                     }
