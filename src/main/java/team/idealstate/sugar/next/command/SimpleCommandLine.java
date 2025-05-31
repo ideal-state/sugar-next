@@ -33,6 +33,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
 import lombok.Data;
@@ -299,7 +300,6 @@ final class SimpleCommandLine implements CommandLine {
         return String.join(PERMISSION_DELIMITER, permissionNodes);
     }
 
-    @NotNull
     private static int getLastChildDepth(@NotNull SimpleCommandLine parent) {
         int depth = parent.depth;
         for (SimpleCommandLine child : parent.children) {
@@ -455,10 +455,16 @@ final class SimpleCommandLine implements CommandLine {
                 score, getName(), String.join(ARGUMENTS_DELIMITER, arguments), accepted));
         CommandExecutor executor = accepted.executor;
         if (executor == null) {
-            return CommandResult.failure();
+            StringJoiner joiner = new StringJoiner(ARGUMENTS_DELIMITER);
+            joiner.add(getName());
+            for (int i = 0; i < accepted.getDepth(); i++) {
+                joiner.add(arguments[i]);
+            }
+            return CommandResult.failure(String.format("Invalid Command '%s'.", joiner));
         }
         if (!validate(context.getSender(), accepted.permission, accepted.open)) {
-            return CommandResult.failure();
+            return CommandResult.failure(String.format(
+                    "You don't have permission '%s' to execute this command.", permissionOf(accepted.permission)));
         }
         for (SimpleCommandLine acceptedChild : acceptedChildren) {
             CommandArgument.Converter<?> converter = acceptedChild.getConverter(context);

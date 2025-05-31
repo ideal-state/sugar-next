@@ -17,6 +17,7 @@
 package team.idealstate.sugar.next.command;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import team.idealstate.sugar.next.command.annotation.CommandArgument;
 import team.idealstate.sugar.validate.Validation;
@@ -26,19 +27,24 @@ import team.idealstate.sugar.validate.annotation.Nullable;
 public interface CommandContext extends Map<String, Object> {
 
     @NotNull
-    static CommandContext of(@NotNull CommandSender sender) {
-        return of(sender, Collections.emptyMap());
+    static CommandContext of(@NotNull CommandSender sender, @NotNull String... arguments) {
+        return of(sender, Collections.emptyMap(), arguments);
     }
 
     @NotNull
-    static CommandContext of(@NotNull CommandSender sender, @NotNull Map<String, Object> map) {
-        Validation.notNull(sender, "sender must not be null.");
-        Validation.notNull(map, "map must not be null.");
-        return new SimpleCommandContext(sender, map);
+    static CommandContext of(
+            @NotNull CommandSender sender, @NotNull Map<String, Object> map, @NotNull String... arguments) {
+        Validation.notNull(sender, "Sender must not be null.");
+        Validation.notNull(map, "Map must not be null.");
+        Validation.notNull(arguments, "Arguments must not be null.");
+        return new SimpleCommandContext(sender, map, arguments);
     }
 
     @NotNull
     CommandSender getSender();
+
+    @NotNull
+    List<String> getArguments();
 
     @Nullable
     CommandArgument.Completer getCompleter(@NotNull Class<?> argumentType);

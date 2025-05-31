@@ -16,7 +16,9 @@
 
 package team.idealstate.sugar.next.command;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import team.idealstate.sugar.next.command.annotation.CommandArgument;
@@ -28,15 +30,29 @@ final class SimpleCommandContext extends LinkedHashMap<String, Object> implement
     private static final long serialVersionUID = -1605421926443481109L;
     private final CommandSender sender;
 
-    public SimpleCommandContext(CommandSender sender, Map<? extends String, ?> map) {
-        super(Validation.requireNotNull(map, "map must not be null."));
-        Validation.notNull(sender, "sender must not be null.");
+    public SimpleCommandContext(
+            @NotNull CommandSender sender, @NotNull Map<? extends String, ?> map, @NotNull String[] arguments) {
+        super(Validation.requireNotNull(map, "Map must not be null."));
+        Validation.notNull(sender, "Sender must not be null.");
+        Validation.notNull(arguments, "Arguments must not be null.");
         this.sender = sender;
+        this.arguments = new String[arguments.length];
+        if (arguments.length != 0) {
+            System.arraycopy(arguments, 0, this.arguments, 0, arguments.length);
+        }
     }
 
     @Override
     public @NotNull CommandSender getSender() {
         return sender;
+    }
+
+    private final String[] arguments;
+
+    @NotNull
+    @Override
+    public List<String> getArguments() {
+        return Arrays.asList(arguments);
     }
 
     private final Map<Class<?>, CommandArgument.Completer> completers = new ConcurrentHashMap<>();
