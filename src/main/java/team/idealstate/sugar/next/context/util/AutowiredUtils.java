@@ -153,7 +153,7 @@ public abstract class AutowiredUtils {
             parameterValues[i] = value;
         }
         executable.setAccessible(true);
-        Object result = null;
+        Object result;
         try {
             Log.debug(() -> String.format("Autowire: '%s' executable '%s'...", instanceTypeName, executableName));
             if (executable instanceof Constructor) {
