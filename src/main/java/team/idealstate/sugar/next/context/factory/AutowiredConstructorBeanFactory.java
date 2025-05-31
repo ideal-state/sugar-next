@@ -55,15 +55,9 @@ public abstract class AutowiredConstructorBeanFactory<M extends Annotation> exte
     @Override
     protected <T> T doCreate(
             @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked) {
-        Constructor<?> constructor = null;
-        for (Constructor<?> c : marked.getConstructors()) {
-            if (c.isAnnotationPresent(Autowired.class)) {
-                constructor = c;
-                break;
-            }
-        }
-        if (constructor != null) {
-            return (T) AutowiredUtils.autowire(context, marked, constructor);
+        T autowired = (T) AutowiredUtils.autowire(context, marked);
+        if (autowired != null) {
+            return autowired;
         }
         return super.doCreate(context, beanName, metadata, marked);
     }

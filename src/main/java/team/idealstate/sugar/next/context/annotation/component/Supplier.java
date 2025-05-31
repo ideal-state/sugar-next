@@ -14,38 +14,16 @@
  *    limitations under the License.
  */
 
-package team.idealstate.sugar.next.context.annotation.feature;
+package team.idealstate.sugar.next.context.annotation.component;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import team.idealstate.sugar.next.context.Bean;
-import team.idealstate.sugar.next.context.Context;
 
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface DependsOn {
-    /** @return 依赖的 {@link Bean#getName()} */
-    String[] beans() default {};
-
-    /** @return 依赖的 {@link Class#getName()} */
-    String[] classes() default {};
-
-    /** @return 依赖的 {@link Context#getProperty(String)} */
-    Property[] properties() default {};
-
-    @Target({ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @Documented
-    @interface Property {
-
-        String key();
-
-        String value() default "";
-
-        boolean strict() default true;
-    }
-}
+@Component
+public @interface Supplier {}

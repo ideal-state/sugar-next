@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -68,6 +69,7 @@ import team.idealstate.sugar.next.bytecode.exception.BytecodeParsingException;
 import team.idealstate.sugar.next.context.annotation.component.Component;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
 import team.idealstate.sugar.next.context.annotation.component.Serialization;
+import team.idealstate.sugar.next.context.annotation.component.Supplier;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Environment;
 import team.idealstate.sugar.next.context.annotation.feature.Named;
@@ -795,6 +797,101 @@ final class SimpleContext implements Context {
                     inDependOnDone.add(beanName);
                 }
                 Log.info(String.format("%s: '%s'.", metadataType.getSimpleName(), beanName));
+                if (Supplier.class.equals(metadataType)) {
+                    Class<Component> supplyMetadataType = Component.class;
+                    String supplyMetadataName = supplyMetadataType.getSimpleName();
+                    for (Method supply : marked.getMethods()) {
+                        String supplyName = supply.getName();
+                        if (Modifier.isStatic(supply.getModifiers())) {
+                            Log.warn(String.format(
+                                    "%s: '%s' static supply method '%s' is ignored.",
+                                    supplyMetadataName, className, supplyName));
+                            continue;
+                        }
+                        Class supplyMarked = supply.getReturnType();
+                        if (void.class.equals(supplyMarked)) {
+                            Log.warn(String.format(
+                                    "%s: '%s' supply method '%s' return void is ignored.",
+                                    supplyMetadataName, className, supplyName));
+                            continue;
+                        }
+                        Environment supplyEnvironment = supply.getAnnotation(Environment.class);
+                        if (supplyEnvironment != null) {
+                            String env = supplyEnvironment.value();
+                            if (!StringUtils.isEmpty(env) && !getEnvironment().equals(env)) {
+                                continue;
+                            }
+                        }
+                        Named supplyNamed = supply.getAnnotation(Named.class);
+                        Validation.notNull(
+                                supplyNamed,
+                                String.format(
+                                        "%s: '%s' supply method '%s' must be annotated with @Named.",
+                                        supplyMetadataName, className, supplyName));
+                        assert supplyNamed != null;
+                        String supplyBeanName = supplyNamed.value();
+                        Validation.notNullOrBlank(
+                                supplyBeanName,
+                                String.format(
+                                        "%s: '%s' supply method '%s' must have a valid bean name.",
+                                        supplyMetadataName, className, supplyName));
+                        if (nameMap.containsKey(supplyBeanName)) {
+                            throw new IllegalStateException(
+                                    String.format("Bean name '%s' is duplicated.", supplyBeanName));
+                        }
+                        DependsOn supplyDependsOn = supply.getAnnotation(DependsOn.class);
+                        if (supplyDependsOn != null) {
+                            for (String dependClassName : supplyDependsOn.classes()) {
+                                try {
+                                    Class.forName(dependClassName, false, markedClassLoader);
+                                } catch (ClassNotFoundException e) {
+                                    Log.debug(
+                                            () -> String.format("No found depend class '%s', skip.", dependClassName));
+                                    continue COLLECTION;
+                                }
+                            }
+                            for (DependsOn.Property property : supplyDependsOn.properties()) {
+                                ContextProperty contextProperty = getProperty(property.key());
+                                if (contextProperty == null
+                                        || (property.strict()
+                                                && !property.value().equals(contextProperty.getValue()))) {
+                                    Log.debug(() -> String.format(
+                                            "Depend property '%s' is not set or not equal to '%s', skip.",
+                                            property.key(), property.value()));
+                                    continue COLLECTION;
+                                }
+                            }
+                        }
+                        Provider<Object> supplyProvider;
+                        Scope supplyScope = supply.getAnnotation(Scope.class);
+                        if (supplyScope == null) {
+                            supplyScope = Reflection.annotation(
+                                    Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
+                        }
+                        if (Scope.PROTOTYPE.equals(supplyScope.value())) {
+                            supplyProvider = () -> AutowiredUtils.autowire(this, bean.getInstance(), marked, supply);
+                        } else {
+                            supplyProvider =
+                                    Lazy.of(() -> AutowiredUtils.autowire(this, bean.getInstance(), marked, supply));
+                        }
+                        SimpleBean<?> supplyBean = new SimpleBean<>(
+                                supplyBeanName,
+                                supplyScope,
+                                supplyDependsOn,
+                                supplyMetadataType,
+                                metadata,
+                                supplyMarked,
+                                supplyProvider);
+                        nameMap.put(supplyBeanName, supplyBean);
+                        markedMap.put(supplyMarked, supplyBean);
+                        if (supplyDependsOn != null) {
+                            dependOnMap.put(supplyBeanName, supplyDependsOn);
+                        } else {
+                            inDependOnDone.add(supplyBeanName);
+                        }
+                        Log.info(String.format("%s: '%s'.", supplyMetadataName, supplyBeanName));
+                    }
+                }
             }
         }
         Log.info("Register beans done.");

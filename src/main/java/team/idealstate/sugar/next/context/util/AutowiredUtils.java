@@ -42,6 +42,21 @@ import team.idealstate.sugar.validate.annotation.Nullable;
 
 public abstract class AutowiredUtils {
 
+    @Nullable
+    public static Object autowire(@NotNull Context context, @NotNull Class<?> instanceType) {
+        Constructor<?> constructor = null;
+        for (Constructor<?> c : instanceType.getConstructors()) {
+            if (c.isAnnotationPresent(Autowired.class)) {
+                constructor = c;
+                break;
+            }
+        }
+        if (constructor != null) {
+            return AutowiredUtils.autowire(context, instanceType, constructor);
+        }
+        return null;
+    }
+
     @NotNull
     public static Object autowire(
             @NotNull Context context, @NotNull Class<?> instanceType, @NotNull Constructor<?> constructor) {
