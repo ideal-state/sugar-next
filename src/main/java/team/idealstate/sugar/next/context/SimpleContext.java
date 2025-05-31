@@ -804,15 +804,24 @@ final class SimpleContext implements Context {
                         String supplyName = supply.getName();
                         if (Modifier.isStatic(supply.getModifiers())) {
                             Log.warn(String.format(
-                                    "%s: '%s' static supply method '%s' is ignored.",
+                                    "%s: '%s' supply method '%s' is static, skip.",
                                     supplyMetadataName, className, supplyName));
                             continue;
                         }
                         Class supplyMarked = supply.getReturnType();
                         if (void.class.equals(supplyMarked)) {
                             Log.warn(String.format(
-                                    "%s: '%s' supply method '%s' return void is ignored.",
-                                    supplyMetadataName, className, supplyName));
+                                    "%s: '%s' supply method '%s' return type is void, skip.",
+                                    supplyMetadataName, className, supplyName
+                            ));
+                            continue;
+                        }
+                        Named supplyNamed = supply.getAnnotation(Named.class);
+                        if (supplyNamed == null) {
+                            Log.warn(String.format(
+                                     "%s: '%s' supply method '%s' is not annotated with @Named, skip.",
+                                    supplyMetadataName, className, supplyName
+                            ));
                             continue;
                         }
                         Environment supplyEnvironment = supply.getAnnotation(Environment.class);
@@ -822,13 +831,6 @@ final class SimpleContext implements Context {
                                 continue;
                             }
                         }
-                        Named supplyNamed = supply.getAnnotation(Named.class);
-                        Validation.notNull(
-                                supplyNamed,
-                                String.format(
-                                        "%s: '%s' supply method '%s' must be annotated with @Named.",
-                                        supplyMetadataName, className, supplyName));
-                        assert supplyNamed != null;
                         String supplyBeanName = supplyNamed.value();
                         Validation.notNullOrBlank(
                                 supplyBeanName,
