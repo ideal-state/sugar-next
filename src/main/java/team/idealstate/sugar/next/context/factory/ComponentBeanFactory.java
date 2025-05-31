@@ -18,7 +18,7 @@ package team.idealstate.sugar.next.context.factory;
 
 import team.idealstate.sugar.next.context.annotation.component.Component;
 
-public class ComponentBeanFactory extends NoArgsConstructorBeanFactory<Component> {
+public class ComponentBeanFactory extends AutowiredConstructorBeanFactory<Component> {
     public ComponentBeanFactory() {
         super(Component.class);
     }

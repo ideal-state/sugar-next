@@ -27,10 +27,6 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -72,11 +68,9 @@ import team.idealstate.sugar.next.bytecode.exception.BytecodeParsingException;
 import team.idealstate.sugar.next.context.annotation.component.Component;
 import team.idealstate.sugar.next.context.annotation.component.Configuration;
 import team.idealstate.sugar.next.context.annotation.component.Serialization;
-import team.idealstate.sugar.next.context.annotation.feature.Autowired;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Environment;
 import team.idealstate.sugar.next.context.annotation.feature.Named;
-import team.idealstate.sugar.next.context.annotation.feature.Qualifier;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactories;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactory;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterProperties;
@@ -97,6 +91,7 @@ import team.idealstate.sugar.next.context.factory.ConfigurationBeanFactory;
 import team.idealstate.sugar.next.context.factory.SerializationBeanFactory;
 import team.idealstate.sugar.next.context.lifecycle.Destroyable;
 import team.idealstate.sugar.next.context.lifecycle.Initializable;
+import team.idealstate.sugar.next.context.util.AutowiredUtils;
 import team.idealstate.sugar.next.databind.Property;
 import team.idealstate.sugar.next.eventbus.EventBus;
 import team.idealstate.sugar.next.function.Lazy;
@@ -509,6 +504,7 @@ final class SimpleContext implements Context {
                 for (String name : beans) {
                     Bean<Object> bean = getBean(name);
                     Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                    assert bean != null;
                     if (Scope.SINGLETON.equals(bean.getScope().value())) {
                         bean.getInstance();
                     }
@@ -557,7 +553,9 @@ final class SimpleContext implements Context {
             if (methods.length != 0) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("autowire methods. (beanName='%s')", beanName));
-                doAutowire(instance, marked, methods);
+                for (Method method : methods) {
+                    AutowiredUtils.autowire(this, instance, marked, method);
+                }
                 Log.debug(() -> String.format(
                         "(%s ms) autowired methods. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
                 start[1] = System.currentTimeMillis();
@@ -597,146 +595,6 @@ final class SimpleContext implements Context {
             }
         }
         return result;
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private void doAutowire(Object instance, Class<?> instanceType, Method[] methods) {
-        for (Method method : methods) {
-            if (method.getAnnotation(Autowired.class) == null) {
-                continue;
-            }
-            String methodName = method.getName();
-            String instanceTypeName = instanceType.getName();
-            if (Modifier.isStatic(method.getModifiers())) {
-                Log.warn(String.format("Autowire: '%s' static method '%s' is ignored.", instanceTypeName, methodName));
-                continue;
-            }
-            long start = System.currentTimeMillis();
-            Parameter[] parameters = method.getParameters();
-            Object[] parameterValues = new Object[parameters.length];
-            for (int i = 0; i < parameters.length; i++) {
-                Parameter parameter = parameters[i];
-                String parameterName = parameter.getName();
-                Class<?> parameterType = parameter.getType();
-                Class<?> autowireType =
-                        getAutowireType(instanceTypeName, methodName, parameterName, parameter.getParameterizedType());
-                Object value = null;
-                Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
-                if (Bean.class.equals(parameterType)) {
-                    List<Bean<?>> autowireValue =
-                            getAutowireValue(qualifier, parameterName, (Class) autowireType, true);
-                    if (!autowireValue.isEmpty()) {
-                        value = autowireValue.get(0);
-                    }
-                } else if (Lazy.class.equals(parameterType)) {
-                    List<Bean<?>> autowireValue =
-                            getAutowireValue(qualifier, parameterName, (Class) autowireType, true);
-                    if (!autowireValue.isEmpty()) {
-                        Bean<?> bean = autowireValue.get(0);
-                        value = Lazy.of(bean::getInstance);
-                    }
-                } else if (List.class.equals(parameterType)) {
-                    List<Bean<?>> autowireValue =
-                            getAutowireValue(qualifier, parameterName, (Class) autowireType, false);
-                    if (autowireValue.isEmpty()) {
-                        value = Collections.emptyList();
-                    } else {
-                        value = autowireValue.stream().map(Bean::getInstance).collect(Collectors.toList());
-                    }
-                } else if (Map.class.equals(parameterType)) {
-                    List<Bean<?>> autowireValue =
-                            getAutowireValue(qualifier, parameterName, (Class) autowireType, false);
-                    if (autowireValue.isEmpty()) {
-                        value = Collections.emptyMap();
-                    } else {
-                        value = autowireValue.stream().collect(Collectors.toMap(Bean::getName, Bean::getInstance));
-                    }
-                } else {
-                    List<Bean<?>> autowireValue =
-                            getAutowireValue(qualifier, parameterName, (Class) autowireType, true);
-                    if (!autowireValue.isEmpty()) {
-                        value = autowireValue.get(0).getInstance();
-                    }
-                }
-                if (parameter.isAnnotationPresent(NotNull.class)) {
-                    Validation.notNull(
-                            value,
-                            String.format(
-                                    "Autowire: '%s' method '%s' parameter '%s' value must not be null.",
-                                    instanceTypeName, methodName, parameterName));
-                }
-                parameterValues[i] = value;
-            }
-            method.setAccessible(true);
-            try {
-                Log.debug(() -> String.format("Autowire: '%s' method '%s'...", instanceTypeName, methodName));
-                method.invoke(instance, parameterValues);
-                Log.debug(() -> String.format(
-                        "(%s) Autowire: '%s' method '%s' done.",
-                        System.currentTimeMillis() - start, instanceTypeName, methodName));
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new ContextException(e);
-            }
-        }
-    }
-
-    @NotNull
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private <T> List<Bean<T>> getAutowireValue(
-            Qualifier qualifier, String parameterName, Class<T> autowireType, boolean one) {
-        if (one || qualifier != null) {
-            Bean bean;
-            if (qualifier == null) {
-                bean = getBean(autowireType);
-            } else {
-                String beanName = qualifier.value();
-                bean = getBean(StringUtils.isNullOrBlank(beanName) ? parameterName : beanName, autowireType);
-            }
-            return bean == null ? Collections.emptyList() : Collections.singletonList(bean);
-        }
-        return getBeans(autowireType);
-    }
-
-    @NotNull
-    private Class<?> getAutowireType(
-            String instanceTypeName, String methodName, String parameterName, Type parameterType) {
-        Type autowireType = null;
-        if (parameterType instanceof Class<?>) {
-            autowireType = parameterType;
-            Validation.is(
-                    !((Class<?>) autowireType).isArray() && ((Class<?>) autowireType).getTypeParameters().length == 0,
-                    String.format(
-                            "Autowire: '%s' method '%s' parameter '%s' must not an array or raw generic type.",
-                            instanceTypeName, methodName, parameterName));
-        } else if (parameterType instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) parameterType;
-            Class<?> rawType = ((Class<?>) parameterizedType.getRawType());
-            if (Bean.class.equals(rawType) || Lazy.class.equals(rawType) || List.class.equals(rawType)) {
-                autowireType = parameterizedType.getActualTypeArguments()[0];
-            } else if (Map.class.equals(rawType)) {
-                Type[] actualTypes = parameterizedType.getActualTypeArguments();
-                Validation.is(
-                        ((Class<?>) actualTypes[0]).isAssignableFrom(String.class),
-                        String.format(
-                                "Autowire: '%s' method '%s' parameter '%s' key type must be assignable from String.",
-                                instanceTypeName, methodName, parameterName));
-                autowireType = actualTypes[1];
-            }
-        }
-        Validation.is(
-                isNonArrayNonGenericClass(autowireType),
-                String.format(
-                        "Autowire: '%s' method '%s' parameter '%s' must not be an array or generic type.",
-                        instanceTypeName, methodName, parameterName));
-        return (Class<?>) autowireType;
-    }
-
-    private boolean isNonArrayNonGenericClass(Type type) {
-        if (!(type instanceof Class)) {
-            return false;
-        }
-        Class<?> cls = (Class<?>) type;
-        return !cls.isArray() && cls.getTypeParameters().length == 0;
     }
 
     @NotNull
