@@ -809,16 +809,16 @@ final class SimpleContext implements Context {
                             continue;
                         }
                         Class supplyMarked = supply.getReturnType();
-                        if (void.class.equals(supplyMarked)) {
-                            Log.warn(String.format(
-                                    "%s: '%s' supply method '%s' return type is void, skip.",
+                        Named supplyNamed = supply.getAnnotation(Named.class);
+                        if (supplyNamed == null) {
+                            Log.debug(String.format(
+                                    "%s: '%s' supply method '%s' is not annotated with @Named, skip.",
                                     supplyMetadataName, className, supplyName));
                             continue;
                         }
-                        Named supplyNamed = supply.getAnnotation(Named.class);
-                        if (supplyNamed == null) {
+                        if (void.class.equals(supplyMarked)) {
                             Log.warn(String.format(
-                                    "%s: '%s' supply method '%s' is not annotated with @Named, skip.",
+                                    "%s: '%s' supply method '%s' return type is void, skip.",
                                     supplyMetadataName, className, supplyName));
                             continue;
                         }

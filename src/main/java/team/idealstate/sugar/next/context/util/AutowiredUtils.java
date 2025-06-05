@@ -32,6 +32,7 @@ import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.context.Bean;
 import team.idealstate.sugar.next.context.Context;
 import team.idealstate.sugar.next.context.annotation.feature.Autowired;
+import team.idealstate.sugar.next.context.annotation.feature.Named;
 import team.idealstate.sugar.next.context.annotation.feature.Qualifier;
 import team.idealstate.sugar.next.context.exception.ContextException;
 import team.idealstate.sugar.next.function.Lazy;
@@ -86,11 +87,18 @@ public abstract class AutowiredUtils {
         } else {
             return null;
         }
-        if (!executable.isAnnotationPresent(Autowired.class)) {
-            return null;
-        }
+        boolean autowiredPresent = executable.isAnnotationPresent(Autowired.class);
+        boolean namedPresent = executable.isAnnotationPresent(Named.class);
         String executableName = executable.getName();
         String instanceTypeName = instanceType.getName();
+        if (!autowiredPresent && !namedPresent) {
+            return null;
+        }
+        if (autowiredPresent && namedPresent) {
+            throw new ContextException(String.format(
+                    "Autowire: '%s' executable '%s' is annotated with both @Autowired and @Named.",
+                    instanceTypeName, executableName));
+        }
         if (Modifier.isStatic(executable.getModifiers())) {
             Log.warn(String.format(
                     "Autowire: '%s' static executable '%s' is ignored.", instanceTypeName, executableName));
