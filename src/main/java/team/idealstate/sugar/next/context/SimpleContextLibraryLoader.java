@@ -59,7 +59,7 @@ final class SimpleContextLibraryLoader {
     static final String MAVEN_RESOLVER_CONFIG_PATH = "maven/config.xml";
     private static final String MAVEN_RESOLVER_LOADER_NAME = "simple";
     private static final String SUGAR_MAVEN_RESOLVER_DEPENDENCY_ID =
-            "team.idealstate.sugar:sugar-maven-resolver:0.1.0-SNAPSHOT";
+            "team.idealstate.sugar:sugar-maven-resolver:0.1.0";
     private static volatile MavenResolver mavenResolver;
 
     @NotNull
