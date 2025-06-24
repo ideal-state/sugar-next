@@ -140,7 +140,10 @@ final class SimpleCommandLine implements CommandLine {
             }
             String[] permission = commandHandler.permission();
             if (permission.length == 0) {
-                permission = arguments;
+                String[] temp = new String[arguments.length + 1];
+                temp[0] = name;
+                System.arraycopy(arguments, 0, temp, 1, arguments.length);
+                permission = temp;
             }
             Parameter[] parameters = method.getParameters();
             Map<String, Pair<Parameter, CommandArgument>> commandArguments = new HashMap<>(parameters.length);
@@ -457,7 +460,11 @@ final class SimpleCommandLine implements CommandLine {
         if (executor == null) {
             StringJoiner joiner = new StringJoiner(ARGUMENTS_DELIMITER);
             joiner.add(getName());
-            for (int i = 0; i < accepted.getDepth(); i++) {
+            int loc = accepted.getDepth() + 1;
+            for (int i = 0; i < loc; i++) {
+                if (i >= arguments.length) {
+                    break;
+                }
                 joiner.add(arguments[i]);
             }
             return CommandResult.failure(String.format("Invalid Command '%s'.", joiner));
