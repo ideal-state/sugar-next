@@ -1042,21 +1042,52 @@ final class SimpleContext implements Context {
     }
 
     @NotNull
-    private List<Annotation> loadBootMetadata() {
-        Annotation[] annotations = contextHolder.getClass().getAnnotations();
+    private List<Annotation> loadBootMetadata(@NotNull ContextHolder holder) {
+        Log.debug(() -> "Loading boot metadata ...");
+        Annotation[] annotations = holder.getClass().getAnnotations();
         if (annotations.length == 0) {
+            Log.debug("No boot metadata.");
             return Collections.emptyList();
         }
         List<Annotation> result = new LinkedList<>();
-        for (Annotation annotation : annotations) {
-            result.add(annotation);
+        ClassLoader classLoader = holder.getClass().getClassLoader();
+        COLLECTION: for (Annotation annotation : annotations) {
             Class<? extends Annotation> annotationType = annotation.annotationType();
+            DependsOn dependsOn = annotationType.getAnnotation(DependsOn.class);
+            if (dependsOn != null) {
+                if (dependsOn.beans().length != 0) {
+                    Log.warn("@DependsOn beans() is not supported when booting.");
+                }
+                for (String dependClassName : dependsOn.classes()) {
+                    try {
+                        Class.forName(dependClassName, false, classLoader);
+                    } catch (ClassNotFoundException e) {
+                        Log.debug(
+                                () -> String.format("No found depend class '%s', skip.", dependClassName));
+                        continue COLLECTION;
+                    }
+                }
+                for (DependsOn.Property property : dependsOn.properties()) {
+                    ContextProperty contextProperty = getProperty(property.key());
+                    if (contextProperty == null
+                            || (property.strict()
+                            && !property.value().equals(contextProperty.getValue()))) {
+                        Log.debug(() -> String.format(
+                                "Depend property '%s' is not set or not equal to '%s', skip.",
+                                property.key(), property.value()));
+                        continue COLLECTION;
+                    }
+                }
+            }
+            result.add(annotation);
             Annotation[] annotationTypeAnnotations = annotationType.getAnnotations();
             if (annotationTypeAnnotations.length == 0) {
                 continue;
             }
             result.addAll(Arrays.asList(annotationTypeAnnotations));
         }
+        Log.debug(() -> String.format("Loading %s boot metadata(s) done.",
+                result.size()));
         return result;
     }
 
@@ -1067,7 +1098,7 @@ final class SimpleContext implements Context {
         Validation.notNull(holder, "Context holder must not be null.");
         Class<? extends ContextHolder> owner = holder.getClass();
         Set<String> scanPackages = new HashSet<>();
-        for (Annotation annotation : loadBootMetadata()) {
+        for (Annotation annotation : loadBootMetadata(holder)) {
             if (annotation instanceof Scan) {
                 Scan scan = (Scan) annotation;
                 String[] value = scan.value();
