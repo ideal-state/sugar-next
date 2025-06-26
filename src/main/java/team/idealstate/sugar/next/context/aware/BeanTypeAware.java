@@ -18,9 +18,7 @@ package team.idealstate.sugar.next.context.aware;
 
 import team.idealstate.sugar.validate.annotation.NotNull;
 
-/** @deprecated 意义不明确的命名，请使用 {@link BeanTypeAware} 替代 */
-@Deprecated
-public interface MarkedAware extends Aware {
+public interface BeanTypeAware extends Aware {
 
-    void setMarkedClass(@NotNull Class<?> marked);
+    void setBeanType(@NotNull Class<?> beanType);
 }

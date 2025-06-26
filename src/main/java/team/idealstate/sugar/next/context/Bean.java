@@ -25,6 +25,9 @@ import team.idealstate.sugar.validate.annotation.Nullable;
 public interface Bean<T> {
 
     @NotNull
+    Context getContext();
+
+    @NotNull
     String getName();
 
     @NotNull
@@ -46,7 +49,14 @@ public interface Bean<T> {
     Annotation getMetadata();
 
     @NotNull
-    Class<T> getMarked();
+    Class<T> getType();
+
+    /** @deprecated 意义不明确的命名，请使用 {@link #getType()} 代替 */
+    @Deprecated
+    @NotNull
+    default Class<T> getMarked() {
+        return getType();
+    }
 
     @NotNull
     T getInstance();

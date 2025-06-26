@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -75,12 +76,15 @@ import team.idealstate.sugar.next.context.annotation.feature.Environment;
 import team.idealstate.sugar.next.context.annotation.feature.Named;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactories;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterFactory;
+import team.idealstate.sugar.next.context.annotation.feature.RegisterParent;
+import team.idealstate.sugar.next.context.annotation.feature.RegisterParents;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterProperties;
 import team.idealstate.sugar.next.context.annotation.feature.RegisterProperty;
 import team.idealstate.sugar.next.context.annotation.feature.Scan;
 import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.next.context.aware.Aware;
 import team.idealstate.sugar.next.context.aware.BeanNameAware;
+import team.idealstate.sugar.next.context.aware.BeanTypeAware;
 import team.idealstate.sugar.next.context.aware.ContextAware;
 import team.idealstate.sugar.next.context.aware.ContextHolderAware;
 import team.idealstate.sugar.next.context.aware.EventBusAware;
@@ -106,8 +110,19 @@ import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 import team.idealstate.sugar.validate.annotation.Nullable;
 
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 final class SimpleContext implements Context {
+
+    private static final Map<Class<? extends ContextHolder>, SimpleContext> CONTEXTS = new ConcurrentHashMap<>();
+
+    @NotNull
+    public static SimpleContext of(
+            @NotNull ContextHolder contextHolder,
+            @NotNull ContextLifecycle contextLifecycle,
+            @NotNull EventBus eventBus) {
+        return new SimpleContext(contextHolder, contextLifecycle, eventBus);
+    }
+
     private static final int STATUS_ERROR = -1;
     private static final int STATUS_DESTROYED = 0;
     private static final int STATUS_INITIALIZED = 1;
@@ -197,12 +212,57 @@ final class SimpleContext implements Context {
         return contextHolder.getClass().getClassLoader();
     }
 
+    private final Set<Context> parents = new LinkedHashSet<>();
+
+    @NotNull
+    @Override
+    public List<Context> getParents() {
+        return parents.isEmpty() ? Collections.emptyList() : new ArrayList<>(parents);
+    }
+
+    private void registerParent(@NotNull Class<? extends ContextHolder> required, @NotNull String optional) {
+        Validation.notNull(required, "required must not be null.");
+        Validation.notNull(optional, "optional must not be null.");
+        mustDependOn(STATUS_INITIALIZED, false, false, null, (it) -> {
+            Log.debug(() -> String.format("Register parent: '%s' or '%s'", required, optional));
+            Context parent = null;
+            if (ContextHolder.class.equals(required)) {
+                try {
+                    parent = CONTEXTS.get(
+                            Class.forName(optional, false, getClassLoader()).asSubclass(ContextHolder.class));
+                    if (parent == null) {
+                        Log.debug(() -> String.format("Parent not found, skip. (holder='%s')", optional));
+                    }
+                } catch (ClassNotFoundException ignored) {
+                    Log.debug(() -> String.format("Parent holder '%s' not found, skip.", optional));
+                }
+            } else {
+                parent = CONTEXTS.get(required);
+                Validation.notNull(parent, "Parent must not be null.");
+            }
+            if (parent != null) {
+                Validation.not(parent.equals(it), "Parent must not be self.");
+                it.parents.add(parent);
+            }
+            return null;
+        });
+    }
+
     private final Map<String, ContextProperty> properties = new LinkedHashMap<>();
 
     @Nullable
     @Override
-    public ContextProperty getProperty(@NotNull String key) {
+    public ContextProperty getProperty(@NotNull String key, boolean inherited) {
         Validation.notNullOrBlank(key, "key must not be null or blank.");
+        if (!inherited) {
+            return properties.get(key);
+        }
+        for (Context parent : getParents()) {
+            ContextProperty property = parent.getProperty(key, true);
+            if (property != null) {
+                return property;
+            }
+        }
         return properties.get(key);
     }
 
@@ -290,8 +350,16 @@ final class SimpleContext implements Context {
                         .orElseGet(() -> finalHolder.getClassLoader().getResourceAsStream(finalUri));
             }
         }
-        if (uri.startsWith(RESOURCE_BUNDLED)) {
-            uri = uri.substring(RESOURCE_BUNDLED.length());
+        boolean bundled = uri.startsWith(RESOURCE_BUNDLED);
+        if (bundled || uri.startsWith(RESOURCE_EMBEDDED)) {
+            if (bundled) {
+                Log.warn(String.format(
+                        "Resource location '%s...' is deprecated. Please use '%s...' instead.",
+                        RESOURCE_BUNDLED, RESOURCE_EMBEDDED));
+                uri = uri.substring(RESOURCE_BUNDLED.length());
+            } else {
+                uri = uri.substring(RESOURCE_EMBEDDED.length());
+            }
             try (JarFile jarFile = getJarFile(holder)) {
                 if (jarFile == null) {
                     return null;
@@ -427,22 +495,30 @@ final class SimpleContext implements Context {
     }
 
     private final Map<String, SimpleBean<?>> nameMap = new LinkedHashMap<>();
-    private final Map<Class<?>, SimpleBean<?>> markedMap = new LinkedHashMap<>();
+    private final Map<Class<?>, SimpleBean<?>> beanTypeMap = new LinkedHashMap<>();
     private final Deque<Object> instances = new ConcurrentLinkedDeque<>();
     private final LinkedHashSet<Class<?>> inProgress = new LinkedHashSet<>();
 
     @Nullable
     @Override
     @SuppressWarnings({"unchecked"})
-    public <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType) {
+    public <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType, boolean inherited) {
         Validation.notNullOrBlank(beanName, "beanName must not be blank.");
         Validation.notNull(beanType, "beanType must not be null.");
         return mustDependOn(STATUS_LOADED, true, false, null, it -> {
+            if (inherited) {
+                for (Context parent : getParents()) {
+                    Bean<T> bean = parent.getBean(beanName, beanType, true);
+                    if (bean != null) {
+                        return bean;
+                    }
+                }
+            }
             SimpleBean<?> bean = it.nameMap.get(beanName);
             if (bean == null) {
                 return null;
             }
-            if (beanType.isAssignableFrom(bean.getMarked())) {
+            if (beanType.isAssignableFrom(bean.getType())) {
                 return (Bean<T>) bean;
             }
             return null;
@@ -452,14 +528,22 @@ final class SimpleContext implements Context {
     @Nullable
     @Override
     @SuppressWarnings({"unchecked"})
-    public <T> Bean<T> getBean(@NotNull Class<T> beanType) {
+    public <T> Bean<T> getBean(@NotNull Class<T> beanType, boolean inherited) {
         Validation.notNull(beanType, "beanType must not be null.");
         return mustDependOn(STATUS_LOADED, true, false, null, it -> {
-            SimpleBean<?> bean = it.markedMap.get(beanType);
+            if (inherited) {
+                for (Context parent : getParents()) {
+                    Bean<T> bean = parent.getBean(beanType, true);
+                    if (bean != null) {
+                        return bean;
+                    }
+                }
+            }
+            SimpleBean<?> bean = it.beanTypeMap.get(beanType);
             if (bean == null) {
-                for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.markedMap.entrySet()) {
-                    Class<?> marked = entry.getKey();
-                    if (beanType.isAssignableFrom(marked)) {
+                for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.beanTypeMap.entrySet()) {
+                    Class<?> beanType1 = entry.getKey();
+                    if (beanType.isAssignableFrom(beanType1)) {
                         return (Bean<T>) entry.getValue();
                     }
                 }
@@ -470,13 +554,21 @@ final class SimpleContext implements Context {
 
     @NotNull
     @SuppressWarnings({"unchecked"})
-    public <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType) {
+    public <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType, boolean inherited) {
         Validation.notNull(beanType, "beanType must not be null.");
         return mustDependOn(STATUS_LOADED, true, false, Collections.emptyList(), it -> {
             List<Bean<T>> result = new LinkedList<>();
-            for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.markedMap.entrySet()) {
-                Class<?> marked = entry.getKey();
-                if (beanType.isAssignableFrom(marked)) {
+            if (inherited) {
+                for (Context parent : getParents()) {
+                    List<Bean<T>> beans = parent.getBeans(beanType, true);
+                    if (!beans.isEmpty()) {
+                        result.addAll(beans);
+                    }
+                }
+            }
+            for (Map.Entry<Class<?>, SimpleBean<?>> entry : it.beanTypeMap.entrySet()) {
+                Class<?> beanType1 = entry.getKey();
+                if (beanType.isAssignableFrom(beanType1)) {
                     result.add((Bean<T>) entry.getValue());
                 }
             }
@@ -490,26 +582,34 @@ final class SimpleContext implements Context {
             @NotNull String beanName,
             @Nullable DependsOn dependsOn,
             @NotNull M metadata,
-            @NotNull Class<T> marked) {
+            @NotNull Class<T> beanType) {
         T result = null;
         try {
             long[] start = {System.currentTimeMillis(), System.currentTimeMillis()};
             Log.debug(() -> String.format(
-                    "creating bean. (beanName='%s', marked='%s', beanFactory='%s')", beanName, marked, beanFactory));
-            if (!inProgress.add(marked)) {
+                    "creating bean. (beanName='%s', beanType='%s', beanFactory='%s')",
+                    beanName, beanType, beanFactory));
+            if (!inProgress.add(beanType)) {
                 throw new IllegalStateException(String.format(
-                        "circular dependency detected. (beanName='%s', marked='%s') %s", beanName, marked, inProgress));
+                        "circular dependency detected. (beanName='%s', beanType='%s') %s",
+                        beanName, beanType, inProgress));
             }
             if (dependsOn != null) {
-                String[] beans = dependsOn.beans();
                 Log.debug(() -> "creating depend beans.");
-                for (String name : beans) {
-                    Bean<Object> bean = getBean(name);
+                for (DependsOn.Bean v : dependsOn.value()) {
+                    String name = v.value();
+                    Bean<?> bean = getBean(name, v.type(), v.inherited());
                     Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
-                    assert bean != null;
-                    if (Scope.SINGLETON.equals(bean.getScope().value())) {
-                        bean.getInstance();
-                    }
+                }
+                String[] beans = dependsOn.beans();
+                if (beans.length != 0) {
+                    Log.warn(String.format(
+                            "@DependsOn beans() is deprecated. Please use value() instead. (beanType='%s')",
+                            beanType.getName()));
+                }
+                for (String name : beans) {
+                    Bean<Object> bean = getBean(name, Object.class, true);
+                    Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
                 }
                 Log.debug(() -> String.format(
                         "(%s ms) created depend beans. (dependBeans='%s')",
@@ -517,15 +617,15 @@ final class SimpleContext implements Context {
                 start[1] = System.currentTimeMillis();
             }
             Log.debug(() -> String.format("create instance. (beanName='%s', metadata='%s')", beanName, metadata));
-            T instance = beanFactory.create(this, beanName, metadata, marked);
+            T instance = beanFactory.create(this, beanName, metadata, beanType);
             result = instance;
             Validation.notNull(instance, "Instance must not be null.");
             Validation.is(
-                    marked.isInstance(instance),
-                    String.format("Instance '%s' must be an instance of '%s'.", marked, marked));
+                    beanType.isInstance(instance),
+                    String.format("Instance '%s' must be an instance of '%s'.", beanType, beanType));
             Log.debug(() -> String.format(
                     "(%s ms) created instance. (beanName='%s', instanceType='%s')",
-                    System.currentTimeMillis() - start[1], beanName, marked));
+                    System.currentTimeMillis() - start[1], beanName, beanType));
             if (instance instanceof Aware) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("inject aware. (beanName='%s')", beanName));
@@ -544,29 +644,32 @@ final class SimpleContext implements Context {
                 if (instance instanceof BeanNameAware) {
                     ((BeanNameAware) instance).setBeanName(beanName);
                 }
+                if (instance instanceof BeanTypeAware) {
+                    ((BeanTypeAware) instance).setBeanType(beanType);
+                }
                 if (instance instanceof MarkedAware) {
-                    ((MarkedAware) instance).setMarkedClass(marked);
+                    ((MarkedAware) instance).setMarkedClass(beanType);
                 }
                 Log.debug(() -> String.format(
                         "(%s ms) injected aware. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
             }
-            Method[] methods = marked.getMethods();
+            Method[] methods = beanType.getMethods();
             T proxy;
             if (methods.length != 0) {
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("autowire methods. (beanName='%s')", beanName));
                 for (Method method : methods) {
-                    AutowiredUtils.autowire(this, instance, marked, method);
+                    AutowiredUtils.autowire(this, instance, beanType, method);
                 }
                 Log.debug(() -> String.format(
                         "(%s ms) autowired methods. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
                 start[1] = System.currentTimeMillis();
                 Log.debug(() -> String.format("maybe proxy. (beanName='%s')", beanName));
-                proxy = maybeProxy(beanFactory, beanName, metadata, instance, marked);
+                proxy = maybeProxy(beanFactory, beanName, metadata, instance, beanType);
                 Validation.notNull(proxy, "Proxy must not be null.");
                 Validation.is(
-                        marked.isInstance(proxy),
-                        String.format("Proxy '%s' must be an instance of '%s'.", proxy.getClass(), marked));
+                        beanType.isInstance(proxy),
+                        String.format("Proxy '%s' must be an instance of '%s'.", proxy.getClass(), beanType));
                 Log.debug(() -> String.format(
                         "(%s ms) maybe proxied. (beanName='%s')", System.currentTimeMillis() - start[1], beanName));
             } else {
@@ -590,7 +693,7 @@ final class SimpleContext implements Context {
             Log.debug(() -> String.format(
                     "(%s ms) created bean. (beanName='%s', runtimeType='%s')",
                     System.currentTimeMillis() - start[0], beanName, proxy.getClass()));
-            inProgress.remove(marked);
+            inProgress.remove(beanType);
         } finally {
             if (result != null) {
                 instances.add(result);
@@ -605,8 +708,8 @@ final class SimpleContext implements Context {
             @NotNull String beanName,
             @NotNull M metadata,
             @NotNull T instance,
-            @NotNull Class<T> marked) {
-        T proxy = beanFactory.proxy(this, beanName, metadata, instance, marked);
+            @NotNull Class<T> beanType) {
+        T proxy = beanFactory.proxy(this, beanName, metadata, instance, beanType);
         Class<?> instanceType = instance.getClass();
         Validation.notNull(proxy, "Proxy must not be null.");
         Validation.is(
@@ -721,10 +824,10 @@ final class SimpleContext implements Context {
                     Log.debug(String.format("No bean factory for metadata '%s', skip", metadataType));
                     continue;
                 }
-                Class<?> marked = javaClass.java(ownerClassLoader);
+                Class<?> beanType = javaClass.java(ownerClassLoader);
                 Annotation metadata;
                 if (metadataType.equals(beanFactory.getMetadataType())) {
-                    metadata = marked.getDeclaredAnnotation(metadataType);
+                    metadata = beanType.getDeclaredAnnotation(metadataType);
                 } else if (Component.class.equals(beanFactory.getMetadataType())) {
                     metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
                 } else {
@@ -738,29 +841,29 @@ final class SimpleContext implements Context {
                 if (!duplicate.add(className)) {
                     throw new IllegalStateException(String.format("Duplicate class name: '%s'", className));
                 }
-                Environment environment = marked.getAnnotation(Environment.class);
+                Environment environment = beanType.getAnnotation(Environment.class);
                 if (environment != null) {
                     String env = environment.value();
                     if (!StringUtils.isEmpty(env) && !getEnvironment().equals(env)) {
                         continue;
                     }
                 }
-                Named named = marked.getAnnotation(Named.class);
+                Named named = beanType.getAnnotation(Named.class);
                 String beanName;
                 if (named == null || StringUtils.isNullOrBlank(named.value())) {
-                    beanName = marked.getName();
+                    beanName = beanType.getName();
                 } else {
                     beanName = named.value();
                 }
                 if (nameMap.containsKey(beanName)) {
                     throw new IllegalStateException(String.format("Bean name '%s' is duplicated.", beanName));
                 }
-                DependsOn dependsOn = marked.getAnnotation(DependsOn.class);
-                ClassLoader markedClassLoader = marked.getClassLoader();
+                DependsOn dependsOn = beanType.getAnnotation(DependsOn.class);
+                ClassLoader beanTypeClassLoader = beanType.getClassLoader();
                 if (dependsOn != null) {
                     for (String dependClassName : dependsOn.classes()) {
                         try {
-                            Class.forName(dependClassName, false, markedClassLoader);
+                            Class.forName(dependClassName, false, beanTypeClassLoader);
                         } catch (ClassNotFoundException e) {
                             Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
                             continue COLLECTION;
@@ -778,19 +881,19 @@ final class SimpleContext implements Context {
                     }
                 }
                 Provider<Object> provider;
-                Scope scope = marked.getAnnotation(Scope.class);
+                Scope scope = beanType.getAnnotation(Scope.class);
                 if (scope == null) {
                     scope = Reflection.annotation(Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
                 }
                 if (Scope.PROTOTYPE.equals(scope.value())) {
-                    provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, marked);
+                    provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, beanType);
                 } else {
-                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, marked));
+                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, beanType));
                 }
-                SimpleBean<?> bean =
-                        new SimpleBean<>(beanName, scope, dependsOn, metadataType, metadata, (Class) marked, provider);
+                SimpleBean<?> bean = new SimpleBean<>(
+                        this, beanName, scope, dependsOn, metadataType, metadata, (Class) beanType, provider);
                 nameMap.put(beanName, bean);
-                markedMap.put(marked, bean);
+                beanTypeMap.put(beanType, bean);
                 if (dependsOn != null) {
                     dependOnMap.put(beanName, dependsOn);
                 } else {
@@ -800,7 +903,7 @@ final class SimpleContext implements Context {
                 if (Supplier.class.equals(metadataType)) {
                     Class<Component> supplyMetadataType = Component.class;
                     String supplyMetadataName = supplyMetadataType.getSimpleName();
-                    for (Method supply : marked.getMethods()) {
+                    for (Method supply : beanType.getMethods()) {
                         String supplyName = supply.getName();
                         if (Modifier.isStatic(supply.getModifiers())) {
                             Log.warn(String.format(
@@ -808,7 +911,7 @@ final class SimpleContext implements Context {
                                     supplyMetadataName, className, supplyName));
                             continue;
                         }
-                        Class supplyMarked = supply.getReturnType();
+                        Class supplyBeanType = supply.getReturnType();
                         Named supplyNamed = supply.getAnnotation(Named.class);
                         if (supplyNamed == null) {
                             Log.debug(String.format(
@@ -816,7 +919,7 @@ final class SimpleContext implements Context {
                                     supplyMetadataName, className, supplyName));
                             continue;
                         }
-                        if (void.class.equals(supplyMarked)) {
+                        if (void.class.equals(supplyBeanType)) {
                             Log.warn(String.format(
                                     "%s: '%s' supply method '%s' return type is void, skip.",
                                     supplyMetadataName, className, supplyName));
@@ -843,7 +946,7 @@ final class SimpleContext implements Context {
                         if (supplyDependsOn != null) {
                             for (String dependClassName : supplyDependsOn.classes()) {
                                 try {
-                                    Class.forName(dependClassName, false, markedClassLoader);
+                                    Class.forName(dependClassName, false, beanTypeClassLoader);
                                 } catch (ClassNotFoundException e) {
                                     Log.debug(
                                             () -> String.format("No found depend class '%s', skip.", dependClassName));
@@ -869,21 +972,22 @@ final class SimpleContext implements Context {
                                     Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
                         }
                         if (Scope.PROTOTYPE.equals(supplyScope.value())) {
-                            supplyProvider = () -> AutowiredUtils.autowire(this, bean.getInstance(), marked, supply);
+                            supplyProvider = () -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply);
                         } else {
                             supplyProvider =
-                                    Lazy.of(() -> AutowiredUtils.autowire(this, bean.getInstance(), marked, supply));
+                                    Lazy.of(() -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply));
                         }
                         SimpleBean<?> supplyBean = new SimpleBean<>(
+                                this,
                                 supplyBeanName,
                                 supplyScope,
                                 supplyDependsOn,
                                 supplyMetadataType,
                                 metadata,
-                                supplyMarked,
+                                supplyBeanType,
                                 supplyProvider);
                         nameMap.put(supplyBeanName, supplyBean);
-                        markedMap.put(supplyMarked, supplyBean);
+                        beanTypeMap.put(supplyBeanType, supplyBean);
                         if (supplyDependsOn != null) {
                             dependOnMap.put(supplyBeanName, supplyDependsOn);
                         } else {
@@ -897,7 +1001,14 @@ final class SimpleContext implements Context {
         Log.info("Register beans done.");
         if (!dependOnMap.isEmpty()) {
             for (String beanName : dependOnMap.keySet()) {
-                resolveDependsOnMap(beanName, dependOnMap, inDependOnDone, new LinkedHashSet<>(dependOnMap.size()));
+                resolveDependsOnMap(
+                        beanName,
+                        nameMap.get(beanName).getType(),
+                        nameMap,
+                        dependOnMap,
+                        inDependOnDone,
+                        new LinkedHashSet<>(dependOnMap.size()),
+                        true);
             }
             dependOnMap.keySet().removeIf(inDependOnDone::contains);
             if (!dependOnMap.isEmpty()) {
@@ -905,7 +1016,7 @@ final class SimpleContext implements Context {
                     String beanName = entry.getKey();
                     DependsOn dependsOn = entry.getValue();
                     Log.debug(() -> String.format("Bean '%s' dependsOn: '%s'", beanName, dependsOn));
-                    markedMap.remove(nameMap.remove(beanName).getMarked());
+                    beanTypeMap.remove(nameMap.remove(beanName).getType());
                     Log.warn(() -> String.format("Bean '%s' dependsOn is not resolved, skip.", beanName));
                 }
             }
@@ -915,28 +1026,63 @@ final class SimpleContext implements Context {
 
     private void resolveDependsOnMap(
             String beanName,
+            Class<?> beanType,
+            Map<String, SimpleBean<?>> nameMap,
             Map<String, DependsOn> dependOnMap,
             Set<String> inDependOnDone,
-            Set<String> inDependOnProgress) {
+            Set<String> inDependOnProgress,
+            boolean inherited) {
         if (inDependOnDone.contains(beanName)) {
             return;
         }
         DependsOn dependsOn = dependOnMap.get(beanName);
-        if (dependsOn == null) {
-            return;
-        }
-        if (!inDependOnProgress.add(beanName)) {
-            throw new IllegalStateException(
-                    String.format("(Circular) Bean '%s' is in dependsOn progress. %s", beanName, inDependOnProgress));
-        }
-        for (String dependBeanName : dependsOn.beans()) {
-            if (inDependOnDone.contains(dependBeanName)) {
-                continue;
+        if (dependsOn != null) {
+            if (!inDependOnProgress.add(beanName)) {
+                throw new IllegalStateException(String.format(
+                        "(Circular) Bean '%s' is in dependsOn progress. %s", beanName, inDependOnProgress));
             }
-            resolveDependsOnMap(dependBeanName, dependOnMap, inDependOnDone, inDependOnProgress);
+            for (DependsOn.Bean bean : dependsOn.value()) {
+                resolveDependsOnMap(
+                        bean.value(),
+                        bean.type(),
+                        nameMap,
+                        dependOnMap,
+                        inDependOnDone,
+                        inDependOnProgress,
+                        bean.inherited());
+            }
+            String[] beans = dependsOn.beans();
+            if (beans.length != 0) {
+                Log.warn(String.format(
+                        "@DependsOn beans() is deprecated. Please use value() instead. (beanName='%s')", beanName));
+            }
+            for (String dependBeanName : beans) {
+                resolveDependsOnMap(
+                        dependBeanName,
+                        Object.class,
+                        nameMap,
+                        dependOnMap,
+                        inDependOnDone,
+                        inDependOnProgress,
+                        inherited);
+            }
+            inDependOnProgress.remove(beanName);
+        } else {
+            Bean<?> bean = nameMap.get(beanName);
+            if (bean == null) {
+                if (inherited) {
+                    for (Context parent : getParents()) {
+                        if ((bean = parent.getBean(beanName, beanType, true)) != null) {
+                            break;
+                        }
+                    }
+                }
+            }
+            if (bean == null) {
+                return;
+            }
         }
         inDependOnDone.add(beanName);
-        inDependOnProgress.remove(beanName);
     }
 
     private void doAfterLoad() {}
@@ -944,10 +1090,10 @@ final class SimpleContext implements Context {
     private void doBeforeEnable() {}
 
     private void doEnable() {
-        if (markedMap.isEmpty()) {
+        if (beanTypeMap.isEmpty()) {
             return;
         }
-        for (SimpleBean<?> bean : markedMap.values()) {
+        for (SimpleBean<?> bean : beanTypeMap.values()) {
             String scope = bean.getScope().value();
             if (StringUtils.isBlank(scope)) {
                 scope = Scope.DEFAULT;
@@ -958,7 +1104,9 @@ final class SimpleContext implements Context {
         }
     }
 
-    private void doAfterEnable() {}
+    private void doAfterEnable() {
+        CONTEXTS.put(getHolder().getClass(), this);
+    }
 
     private void doBeforeDisable() {}
 
@@ -987,10 +1135,12 @@ final class SimpleContext implements Context {
                 throw new IllegalStateException("Failed to destroy " + count + " instances.");
             }
         } finally {
+            CONTEXTS.values().removeIf(this::equals);
+            parents.clear();
             properties.clear();
             beanFactories.clear();
             nameMap.clear();
-            markedMap.clear();
+            beanTypeMap.clear();
             instances.clear();
             inProgress.clear();
         }
@@ -1044,34 +1194,40 @@ final class SimpleContext implements Context {
     @NotNull
     private List<Annotation> loadBootMetadata(@NotNull ContextHolder holder) {
         Log.debug(() -> "Loading boot metadata ...");
-        Annotation[] annotations = holder.getClass().getAnnotations();
+        Class<? extends ContextHolder> holderClass = holder.getClass();
+        Annotation[] annotations = holderClass.getAnnotations();
         if (annotations.length == 0) {
-            Log.debug("No boot metadata.");
+            Log.debug("No boot metadata(s).");
             return Collections.emptyList();
         }
         List<Annotation> result = new LinkedList<>();
-        ClassLoader classLoader = holder.getClass().getClassLoader();
-        COLLECTION: for (Annotation annotation : annotations) {
+        ClassLoader classLoader = holderClass.getClassLoader();
+        COLLECTION:
+        for (Annotation annotation : annotations) {
             Class<? extends Annotation> annotationType = annotation.annotationType();
             DependsOn dependsOn = annotationType.getAnnotation(DependsOn.class);
             if (dependsOn != null) {
-                if (dependsOn.beans().length != 0) {
-                    Log.warn("@DependsOn beans() is not supported when booting.");
+                boolean b = dependsOn.beans().length != 0;
+                if (b) {
+                    Log.warn(String.format(
+                            "@DependsOn beans() is deprecated. Please use value() instead. (holder='%s')",
+                            holderClass.getName()));
+                }
+                if (b || dependsOn.value().length != 0) {
+                    Log.warn("@DependsOn value() or beans() is not supported when booting.");
                 }
                 for (String dependClassName : dependsOn.classes()) {
                     try {
                         Class.forName(dependClassName, false, classLoader);
                     } catch (ClassNotFoundException e) {
-                        Log.debug(
-                                () -> String.format("No found depend class '%s', skip.", dependClassName));
+                        Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
                         continue COLLECTION;
                     }
                 }
                 for (DependsOn.Property property : dependsOn.properties()) {
                     ContextProperty contextProperty = getProperty(property.key());
                     if (contextProperty == null
-                            || (property.strict()
-                            && !property.value().equals(contextProperty.getValue()))) {
+                            || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
                         Log.debug(() -> String.format(
                                 "Depend property '%s' is not set or not equal to '%s', skip.",
                                 property.key(), property.value()));
@@ -1086,8 +1242,7 @@ final class SimpleContext implements Context {
             }
             result.addAll(Arrays.asList(annotationTypeAnnotations));
         }
-        Log.debug(() -> String.format("Loading %s boot metadata(s) done.",
-                result.size()));
+        Log.debug(() -> String.format("Loading %s boot metadata(s) done.", result.size()));
         return result;
     }
 
@@ -1112,9 +1267,6 @@ final class SimpleContext implements Context {
                 registerBeanFactory(
                         registerFactory.metadata(),
                         registerFactory.beanFactory().getConstructor().newInstance());
-            } else if (annotation instanceof RegisterProperty) {
-                RegisterProperty registerProperty = (RegisterProperty) annotation;
-                registerProperty(registerProperty.key(), registerProperty.value());
             } else if (annotation instanceof RegisterFactories) {
                 RegisterFactories registerFactories = (RegisterFactories) annotation;
                 for (RegisterFactory registerFactory : registerFactories.value()) {
@@ -1122,10 +1274,21 @@ final class SimpleContext implements Context {
                             registerFactory.metadata(),
                             registerFactory.beanFactory().getConstructor().newInstance());
                 }
+            } else if (annotation instanceof RegisterProperty) {
+                RegisterProperty registerProperty = (RegisterProperty) annotation;
+                registerProperty(registerProperty.key(), registerProperty.value());
             } else if (annotation instanceof RegisterProperties) {
                 RegisterProperties registerProperties = (RegisterProperties) annotation;
                 for (RegisterProperty registerProperty : registerProperties.value()) {
                     registerProperty(registerProperty.key(), registerProperty.value());
+                }
+            } else if (annotation instanceof RegisterParent) {
+                RegisterParent registerParent = (RegisterParent) annotation;
+                registerParent(registerParent.required(), registerParent.optional());
+            } else if (annotation instanceof RegisterParents) {
+                RegisterParents registerParents = (RegisterParents) annotation;
+                for (RegisterParent registerParent : registerParents.value()) {
+                    registerParent(registerParent.required(), registerParent.optional());
                 }
             }
         }

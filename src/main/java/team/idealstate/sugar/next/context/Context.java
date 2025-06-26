@@ -30,17 +30,23 @@ import team.idealstate.sugar.validate.annotation.Nullable;
 /** @see ContextException */
 public interface Context {
 
+    /** @deprecated 此项命名不明确，请使用 {@link #RESOURCE_EMBEDDED} 替代 */
+    @Deprecated
     String RESOURCE_BUNDLED = "bundled:";
+
+    String RESOURCE_EMBEDDED = "embedded:";
     String RESOURCE_CLASSPATH = "classpath:";
     String RESOURCE_CONTEXT = "context:";
     String PROPERTY_ENVIRONMENT_KEY = "sugar.next.environment";
+
+    boolean DEFAULT_OPTION_INHERITED = true;
 
     @NotNull
     static Context of(
             @NotNull ContextHolder contextHolder,
             @NotNull ContextLifecycle contextLifecycle,
             @NotNull EventBus eventBus) {
-        return new SimpleContext(contextHolder, contextLifecycle, eventBus);
+        return SimpleContext.of(contextHolder, contextLifecycle, eventBus);
     }
 
     /**
@@ -56,11 +62,23 @@ public interface Context {
     @NotNull
     ClassLoader getClassLoader();
 
+    @NotNull
+    List<Context> getParents();
+
     @Nullable
-    ContextProperty getProperty(@NotNull String key);
+    default ContextProperty getProperty(@NotNull String key) {
+        return getProperty(key, DEFAULT_OPTION_INHERITED);
+    }
+
+    @Nullable
+    ContextProperty getProperty(@NotNull String key, boolean inherited);
 
     default boolean hasProperty(@NotNull String key) {
-        return getProperty(key) != null;
+        return hasProperty(key, DEFAULT_OPTION_INHERITED);
+    }
+
+    default boolean hasProperty(@NotNull String key, boolean inherited) {
+        return getProperty(key, inherited) != null;
     }
 
     void registerProperty(@NotNull String key, @NotNull String value);
@@ -82,8 +100,8 @@ public interface Context {
     /**
      * @param uri 资源的 {@link URI}
      * @param classLoader 资源的 {@link ClassLoader}
+     * @see #RESOURCE_EMBEDDED
      * @see #RESOURCE_CLASSPATH
-     * @see #RESOURCE_BUNDLED
      * @see #RESOURCE_CONTEXT
      */
     @Nullable
@@ -115,11 +133,32 @@ public interface Context {
     }
 
     @Nullable
-    <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType);
+    @SuppressWarnings("unchecked")
+    default <T> Bean<T> getBean(@NotNull String beanName, boolean inherited) {
+        return (Bean<T>) getBean(beanName, Object.class, inherited);
+    }
 
     @Nullable
-    <T> Bean<T> getBean(@NotNull Class<T> beanType);
+    default <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType) {
+        return getBean(beanName, beanType, DEFAULT_OPTION_INHERITED);
+    }
+
+    @Nullable
+    <T> Bean<T> getBean(@NotNull String beanName, @NotNull Class<T> beanType, boolean inherited);
+
+    @Nullable
+    default <T> Bean<T> getBean(@NotNull Class<T> beanType) {
+        return getBean(beanType, DEFAULT_OPTION_INHERITED);
+    }
+
+    @Nullable
+    <T> Bean<T> getBean(@NotNull Class<T> beanType, boolean inherited);
 
     @NotNull
-    <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType);
+    default <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType) {
+        return getBeans(beanType, DEFAULT_OPTION_INHERITED);
+    }
+
+    @NotNull
+    <T> List<Bean<T>> getBeans(@NotNull Class<T> beanType, boolean inherited);
 }

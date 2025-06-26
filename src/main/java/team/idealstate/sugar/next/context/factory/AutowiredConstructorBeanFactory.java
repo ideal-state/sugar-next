@@ -32,9 +32,9 @@ public abstract class AutowiredConstructorBeanFactory<M extends Annotation> exte
 
     @Override
     protected boolean doValidate(
-            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> beanType) {
         int found = 0;
-        for (Constructor<?> constructor : marked.getConstructors()) {
+        for (Constructor<?> constructor : beanType.getConstructors()) {
             if (constructor.isAnnotationPresent(Autowired.class)) {
                 found++;
             }
@@ -42,23 +42,23 @@ public abstract class AutowiredConstructorBeanFactory<M extends Annotation> exte
         if (found > 1) {
             throw new ContextException(String.format(
                     "%s: %s has more than one constructor annotated with @Autowired.",
-                    getMetadataType().getSimpleName(), marked.getName()));
+                    getMetadataType().getSimpleName(), beanType.getName()));
         }
         if (found > 0) {
             return true;
         }
-        return super.doValidate(context, beanName, metadata, marked);
+        return super.doValidate(context, beanName, metadata, beanType);
     }
 
     @SuppressWarnings("unchecked")
     @NotNull
     @Override
     protected <T> T doCreate(
-            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked) {
-        T autowired = (T) AutowiredUtils.autowire(context, marked);
+            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> beanType) {
+        T autowired = (T) AutowiredUtils.autowire(context, beanType);
         if (autowired != null) {
             return autowired;
         }
-        return super.doCreate(context, beanName, metadata, marked);
+        return super.doCreate(context, beanName, metadata, beanType);
     }
 }

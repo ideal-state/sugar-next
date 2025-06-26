@@ -31,6 +31,9 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 final class SimpleBean<T> implements Bean<T> {
 
     @NonNull
+    private final Context context;
+
+    @NonNull
     private final String name;
 
     @NonNull
@@ -45,7 +48,7 @@ final class SimpleBean<T> implements Bean<T> {
     private final Annotation metadata;
 
     @NonNull
-    private final Class<T> marked;
+    private final Class<T> type;
 
     @NonNull
     @Getter(AccessLevel.PRIVATE)

@@ -14,13 +14,18 @@
  *    limitations under the License.
  */
 
-package team.idealstate.sugar.next.context.aware;
+package team.idealstate.sugar.next.context.annotation.feature;
 
-import team.idealstate.sugar.validate.annotation.NotNull;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-/** @deprecated 意义不明确的命名，请使用 {@link BeanTypeAware} 替代 */
-@Deprecated
-public interface MarkedAware extends Aware {
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface RegisterParents {
 
-    void setMarkedClass(@NotNull Class<?> marked);
+    RegisterParent[] value() default {};
 }

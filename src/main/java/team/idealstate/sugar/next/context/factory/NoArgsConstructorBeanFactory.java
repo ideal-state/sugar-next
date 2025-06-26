@@ -29,12 +29,12 @@ public abstract class NoArgsConstructorBeanFactory<M extends Annotation> extends
 
     @Override
     protected boolean doValidate(
-            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> marked) {
+            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> beanType) {
         try {
-            marked.getConstructor();
+            beanType.getConstructor();
         } catch (NoSuchMethodException e) {
             Log.warn(String.format(
-                    "%s: %s has no default constructor.", getMetadataType().getSimpleName(), marked.getName()));
+                    "%s: %s has no default constructor.", getMetadataType().getSimpleName(), beanType.getName()));
             return false;
         }
         return true;
@@ -43,9 +43,9 @@ public abstract class NoArgsConstructorBeanFactory<M extends Annotation> extends
     @NotNull
     @Override
     protected <T> T doCreate(
-            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked) {
+            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> beanType) {
         try {
-            return marked.getConstructor().newInstance();
+            return beanType.getConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
             throw new ContextException(e);
         }

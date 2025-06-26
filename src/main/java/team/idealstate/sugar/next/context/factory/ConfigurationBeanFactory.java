@@ -50,7 +50,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
             @NotNull Context context,
             @NotNull String beanName,
             @NotNull Configuration metadata,
-            @NotNull Class<?> marked) {
+            @NotNull Class<?> beanType) {
         String uri = metadata.uri();
         try {
             new URI(uri);
@@ -63,7 +63,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
         List<Bean<Codec>> beans = context.getBeans(Codec.class);
         if (beans.isEmpty()) {
             throw new ContextException(String.format(
-                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), marked.getName()));
+                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), beanType.getName()));
         }
         String extension = uri.substring(uri.lastIndexOf('.') + 1);
         String release = metadata.release().replace("\\", "/");
@@ -106,7 +106,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                         String.format(
                                 "%s: Invalid file configuration release uri '%s'.",
                                 getMetadataType().getSimpleName(), release));
-                InputStream resource = context.getResource(release, marked, marked.getClassLoader());
+                InputStream resource = context.getResource(release, beanType, beanType.getClassLoader());
                 Validation.notNull(
                         resource,
                         String.format(
@@ -132,9 +132,9 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
             @NotNull Context context,
             @NotNull String beanName,
             @NotNull Configuration metadata,
-            @NotNull Class<T> marked) {
+            @NotNull Class<T> beanType) {
         try {
-            ClassLoader markedClassLoader = marked.getClassLoader();
+            ClassLoader beanTypeClassLoader = beanType.getClassLoader();
             String uri = metadata.uri().replace("\\", "/");
             String extension;
             Validation.is(
@@ -142,7 +142,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                     String.format(
                             "%s: Invalid file configuration uri '%s'.",
                             getMetadataType().getSimpleName(), uri));
-            InputStream resource = context.getResource(uri, marked, markedClassLoader);
+            InputStream resource = context.getResource(uri, beanType, beanTypeClassLoader);
             String release;
             if (resource == null
                     && StringUtils.isNullOrBlank(release = metadata.release().replace("\\", "/"))) {
@@ -151,7 +151,7 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                         String.format(
                                 "%s: Invalid file configuration release uri '%s'.",
                                 getMetadataType().getSimpleName(), release));
-                resource = context.getResource(release, marked, markedClassLoader);
+                resource = context.getResource(release, beanType, beanTypeClassLoader);
                 Validation.notNull(
                         resource,
                         String.format(
@@ -189,11 +189,11 @@ public class ConfigurationBeanFactory extends AbstractBeanFactory<Configuration>
                 }
                 Codec codec = bean.getInstance();
                 if (((Serialization) annotation).value().equals(extension)) {
-                    return (T) functional(resource).use(Object.class, input -> codec.deserialize(input, marked));
+                    return (T) functional(resource).use(Object.class, input -> codec.deserialize(input, beanType));
                 }
             }
             throw new ContextException(String.format(
-                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), marked.getName()));
+                    "%s: No codec found with '%s'.", getMetadataType().getSimpleName(), beanType.getName()));
         } catch (IOException e) {
             throw new ContextException(e);
         }

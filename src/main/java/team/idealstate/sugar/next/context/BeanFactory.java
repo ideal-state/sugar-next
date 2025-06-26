@@ -24,10 +24,11 @@ public interface BeanFactory<M extends Annotation> {
     @NotNull
     Class<M> getMetadataType();
 
-    boolean validate(@NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> marked);
+    boolean validate(
+            @NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<?> beanType);
 
     @NotNull
-    <T> T create(@NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> marked);
+    <T> T create(@NotNull Context context, @NotNull String beanName, @NotNull M metadata, @NotNull Class<T> beanType);
 
     @NotNull
     <T> T proxy(
@@ -35,5 +36,5 @@ public interface BeanFactory<M extends Annotation> {
             @NotNull String beanName,
             @NotNull M metadata,
             @NotNull T instance,
-            @NotNull Class<T> marked);
+            @NotNull Class<T> beanType);
 }

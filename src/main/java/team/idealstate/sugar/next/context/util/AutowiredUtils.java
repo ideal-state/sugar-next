@@ -31,8 +31,10 @@ import java.util.stream.Collectors;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.context.Bean;
 import team.idealstate.sugar.next.context.Context;
+import team.idealstate.sugar.next.context.ContextHolder;
 import team.idealstate.sugar.next.context.annotation.feature.Autowired;
 import team.idealstate.sugar.next.context.annotation.feature.Named;
+import team.idealstate.sugar.next.context.annotation.feature.Owned;
 import team.idealstate.sugar.next.context.annotation.feature.Qualifier;
 import team.idealstate.sugar.next.context.exception.ContextException;
 import team.idealstate.sugar.next.function.Lazy;
@@ -115,22 +117,27 @@ public abstract class AutowiredUtils {
                     getAutowireType(instanceTypeName, executableName, parameterName, parameter.getParameterizedType());
             Object value = null;
             Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
-            if (Bean.class.equals(parameterType)) {
+            boolean inherited = !parameter.isAnnotationPresent(Owned.class);
+            if (Context.class.equals(parameterType)) {
+                value = context;
+            } else if (ContextHolder.class.equals(parameterType)) {
+                value = context.getHolder();
+            } else if (Bean.class.equals(parameterType)) {
                 List<Bean<?>> autowireValue =
-                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, true);
+                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, inherited, true);
                 if (!autowireValue.isEmpty()) {
                     value = autowireValue.get(0);
                 }
             } else if (Lazy.class.equals(parameterType)) {
                 List<Bean<?>> autowireValue =
-                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, true);
+                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, inherited, true);
                 if (!autowireValue.isEmpty()) {
                     Bean<?> bean = autowireValue.get(0);
                     value = Lazy.of(bean::getInstance);
                 }
             } else if (List.class.equals(parameterType)) {
                 List<Bean<?>> autowireValue =
-                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, false);
+                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, inherited, false);
                 if (autowireValue.isEmpty()) {
                     value = Collections.emptyList();
                 } else {
@@ -138,7 +145,7 @@ public abstract class AutowiredUtils {
                 }
             } else if (Map.class.equals(parameterType)) {
                 List<Bean<?>> autowireValue =
-                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, false);
+                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, inherited, false);
                 if (autowireValue.isEmpty()) {
                     value = Collections.emptyMap();
                 } else {
@@ -146,7 +153,7 @@ public abstract class AutowiredUtils {
                 }
             } else {
                 List<Bean<?>> autowireValue =
-                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, true);
+                        getAutowireValue(context, qualifier, parameterName, (Class) autowireType, inherited, true);
                 if (!autowireValue.isEmpty()) {
                     value = autowireValue.get(0).getInstance();
                 }
@@ -185,18 +192,20 @@ public abstract class AutowiredUtils {
             @Nullable Qualifier qualifier,
             @NotNull String parameterName,
             @NotNull Class<T> autowireType,
+            boolean inherited,
             boolean one) {
         if (one || qualifier != null) {
             Bean bean;
             if (qualifier == null) {
-                bean = context.getBean(autowireType);
+                bean = context.getBean(autowireType, inherited);
             } else {
                 String beanName = qualifier.value();
-                bean = context.getBean(StringUtils.isNullOrBlank(beanName) ? parameterName : beanName, autowireType);
+                bean = context.getBean(
+                        StringUtils.isNullOrBlank(beanName) ? parameterName : beanName, autowireType, inherited);
             }
             return bean == null ? Collections.emptyList() : Collections.singletonList(bean);
         }
-        return context.getBeans(autowireType);
+        return context.getBeans(autowireType, inherited);
     }
 
     @NotNull
