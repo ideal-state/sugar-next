@@ -17,6 +17,8 @@
 package team.idealstate.sugar.next.context;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
+
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -39,7 +41,8 @@ final class SimpleBean<T> implements Bean<T> {
     @NonNull
     private final Scope scope;
 
-    private final DependsOn dependsOn;
+    @NonNull
+    private final List<DependsOn> dependencies;
 
     @NonNull
     private final Class<? extends Annotation> metadataType;

@@ -17,6 +17,8 @@
 package team.idealstate.sugar.next.context;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
+
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.validate.annotation.NotNull;
@@ -33,8 +35,18 @@ public interface Bean<T> {
     @NotNull
     Scope getScope();
 
+    /**
+     * @deprecated 不完整的依赖项数据，请使用 {@link #getDependencies()} 代替
+     */
+    @Deprecated
     @Nullable
-    DependsOn getDependsOn();
+    default DependsOn getDependsOn() {
+        List<DependsOn> dependencies = getDependencies();
+        return dependencies.isEmpty() ? null : dependencies.get(0);
+    }
+
+    @NotNull
+    List<DependsOn> getDependencies();
 
     /**
      * @return 注意：此值不一定满足 <code>equals({@link #getMetadata()}.annotationType())<code/>

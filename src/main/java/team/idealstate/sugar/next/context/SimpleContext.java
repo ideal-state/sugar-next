@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -580,7 +581,7 @@ final class SimpleContext implements Context {
     private <M extends Annotation, T> T doCreate(
             @NotNull BeanFactory<M> beanFactory,
             @NotNull String beanName,
-            @Nullable DependsOn dependsOn,
+            @NotNull List<DependsOn> dependencies,
             @NotNull M metadata,
             @NotNull Class<T> beanType) {
         T result = null;
@@ -594,26 +595,28 @@ final class SimpleContext implements Context {
                         "circular dependency detected. (beanName='%s', beanType='%s') %s",
                         beanName, beanType, inProgress));
             }
-            if (dependsOn != null) {
+            if (!dependencies.isEmpty()) {
                 Log.debug(() -> "creating depend beans.");
-                for (DependsOn.Bean v : dependsOn.value()) {
-                    String name = v.value();
-                    Bean<?> bean = getBean(name, v.type(), v.inherited());
-                    Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                for (DependsOn dependency : dependencies) {
+                    for (DependsOn.Bean v : dependency.value()) {
+                        String name = v.value();
+                        Bean<?> bean = getBean(name, v.type(), v.inherited());
+                        Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                    }
+                    String[] beans = dependency.beans();
+                    if (beans.length != 0) {
+                        Log.warn(String.format(
+                                "@DependsOn beans() is deprecated. Please use value() instead. (beanType='%s')",
+                                beanType.getName()));
+                    }
+                    for (String name : beans) {
+                        Bean<Object> bean = getBean(name, Object.class, true);
+                        Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                    }
+                    Log.debug(() -> String.format(
+                            "(%s ms) created depend beans. (dependBeans='%s')",
+                            System.currentTimeMillis() - start[1], Arrays.toString(beans)));
                 }
-                String[] beans = dependsOn.beans();
-                if (beans.length != 0) {
-                    Log.warn(String.format(
-                            "@DependsOn beans() is deprecated. Please use value() instead. (beanType='%s')",
-                            beanType.getName()));
-                }
-                for (String name : beans) {
-                    Bean<Object> bean = getBean(name, Object.class, true);
-                    Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
-                }
-                Log.debug(() -> String.format(
-                        "(%s ms) created depend beans. (dependBeans='%s')",
-                        System.currentTimeMillis() - start[1], Arrays.toString(beans)));
                 start[1] = System.currentTimeMillis();
             }
             Log.debug(() -> String.format("create instance. (beanName='%s', metadata='%s')", beanName, metadata));
@@ -764,7 +767,7 @@ final class SimpleContext implements Context {
                         .apply(it -> scanPackages.forEach(it::add))
                         .it()));
         ClassLoader ownerClassLoader = owner.getClassLoader();
-        Map<String, DependsOn> dependOnMap = new LinkedHashMap<>(bootFiles.size() * 64);
+        Map<String, List<DependsOn>> dependOnMap = new LinkedHashMap<>(bootFiles.size() * 64);
         Set<String> inDependOnDone = new LinkedHashSet<>(bootFiles.size() * 64);
         Set<String> duplicate = new HashSet<>(bootFiles.size() * 64);
         Log.info("Register beans ...");
@@ -858,9 +861,12 @@ final class SimpleContext implements Context {
                 if (nameMap.containsKey(beanName)) {
                     throw new IllegalStateException(String.format("Bean name '%s' is duplicated.", beanName));
                 }
-                DependsOn dependsOn = beanType.getAnnotation(DependsOn.class);
+                List<DependsOn> dependencies = getMetadataAnnotations(beanType).stream()
+                        .filter(DependsOn.class::isInstance)
+                        .map(DependsOn.class::cast)
+                        .collect(Collectors.toList());
                 ClassLoader beanTypeClassLoader = beanType.getClassLoader();
-                if (dependsOn != null) {
+                for (DependsOn dependsOn : dependencies) {
                     for (String dependClassName : dependsOn.classes()) {
                         try {
                             Class.forName(dependClassName, false, beanTypeClassLoader);
@@ -886,16 +892,16 @@ final class SimpleContext implements Context {
                     scope = Reflection.annotation(Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
                 }
                 if (Scope.PROTOTYPE.equals(scope.value())) {
-                    provider = () -> doCreate(beanFactory, beanName, dependsOn, metadata, beanType);
+                    provider = () -> doCreate(beanFactory, beanName, dependencies, metadata, beanType);
                 } else {
-                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependsOn, metadata, beanType));
+                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependencies, metadata, beanType));
                 }
                 SimpleBean<?> bean = new SimpleBean<>(
-                        this, beanName, scope, dependsOn, metadataType, metadata, (Class) beanType, provider);
+                        this, beanName, scope, dependencies, metadataType, metadata, (Class) beanType, provider);
                 nameMap.put(beanName, bean);
                 beanTypeMap.put(beanType, bean);
-                if (dependsOn != null) {
-                    dependOnMap.put(beanName, dependsOn);
+                if (!dependencies.isEmpty()) {
+                    dependOnMap.put(beanName, dependencies);
                 } else {
                     inDependOnDone.add(beanName);
                 }
@@ -942,8 +948,11 @@ final class SimpleContext implements Context {
                             throw new IllegalStateException(
                                     String.format("Bean name '%s' is duplicated.", supplyBeanName));
                         }
-                        DependsOn supplyDependsOn = supply.getAnnotation(DependsOn.class);
-                        if (supplyDependsOn != null) {
+                        List<DependsOn> supplyDependencies = getMetadataAnnotations(supply).stream()
+                                .filter(DependsOn.class::isInstance)
+                                .map(DependsOn.class::cast)
+                                .collect(Collectors.toList());
+                        for (DependsOn supplyDependsOn : supplyDependencies) {
                             for (String dependClassName : supplyDependsOn.classes()) {
                                 try {
                                     Class.forName(dependClassName, false, beanTypeClassLoader);
@@ -957,7 +966,7 @@ final class SimpleContext implements Context {
                                 ContextProperty contextProperty = getProperty(property.key());
                                 if (contextProperty == null
                                         || (property.strict()
-                                                && !property.value().equals(contextProperty.getValue()))) {
+                                        && !property.value().equals(contextProperty.getValue()))) {
                                     Log.debug(() -> String.format(
                                             "Depend property '%s' is not set or not equal to '%s', skip.",
                                             property.key(), property.value()));
@@ -981,15 +990,15 @@ final class SimpleContext implements Context {
                                 this,
                                 supplyBeanName,
                                 supplyScope,
-                                supplyDependsOn,
+                                supplyDependencies,
                                 supplyMetadataType,
                                 metadata,
                                 supplyBeanType,
                                 supplyProvider);
                         nameMap.put(supplyBeanName, supplyBean);
                         beanTypeMap.put(supplyBeanType, supplyBean);
-                        if (supplyDependsOn != null) {
-                            dependOnMap.put(supplyBeanName, supplyDependsOn);
+                        if (!supplyDependencies.isEmpty()) {
+                            dependOnMap.put(supplyBeanName, supplyDependencies);
                         } else {
                             inDependOnDone.add(supplyBeanName);
                         }
@@ -1012,10 +1021,7 @@ final class SimpleContext implements Context {
             }
             dependOnMap.keySet().removeIf(inDependOnDone::contains);
             if (!dependOnMap.isEmpty()) {
-                for (Map.Entry<String, DependsOn> entry : dependOnMap.entrySet()) {
-                    String beanName = entry.getKey();
-                    DependsOn dependsOn = entry.getValue();
-                    Log.debug(() -> String.format("Bean '%s' dependsOn: '%s'", beanName, dependsOn));
+                for (String beanName : dependOnMap.keySet()) {
                     beanTypeMap.remove(nameMap.remove(beanName).getType());
                     Log.warn(() -> String.format("Bean '%s' dependsOn is not resolved, skip.", beanName));
                 }
@@ -1028,43 +1034,45 @@ final class SimpleContext implements Context {
             String beanName,
             Class<?> beanType,
             Map<String, SimpleBean<?>> nameMap,
-            Map<String, DependsOn> dependOnMap,
+            Map<String, List<DependsOn>> dependOnMap,
             Set<String> inDependOnDone,
             Set<String> inDependOnProgress,
             boolean inherited) {
         if (inDependOnDone.contains(beanName)) {
             return;
         }
-        DependsOn dependsOn = dependOnMap.get(beanName);
-        if (dependsOn != null) {
+        List<DependsOn> dependencies = dependOnMap.get(beanName);
+        if (!dependencies.isEmpty()) {
             if (!inDependOnProgress.add(beanName)) {
                 throw new IllegalStateException(String.format(
                         "(Circular) Bean '%s' is in dependsOn progress. %s", beanName, inDependOnProgress));
             }
-            for (DependsOn.Bean bean : dependsOn.value()) {
-                resolveDependsOnMap(
-                        bean.value(),
-                        bean.type(),
-                        nameMap,
-                        dependOnMap,
-                        inDependOnDone,
-                        inDependOnProgress,
-                        bean.inherited());
-            }
-            String[] beans = dependsOn.beans();
-            if (beans.length != 0) {
-                Log.warn(String.format(
-                        "@DependsOn beans() is deprecated. Please use value() instead. (beanName='%s')", beanName));
-            }
-            for (String dependBeanName : beans) {
-                resolveDependsOnMap(
-                        dependBeanName,
-                        Object.class,
-                        nameMap,
-                        dependOnMap,
-                        inDependOnDone,
-                        inDependOnProgress,
-                        inherited);
+            for (DependsOn dependsOn : dependencies) {
+                for (DependsOn.Bean bean : dependsOn.value()) {
+                    resolveDependsOnMap(
+                            bean.value(),
+                            bean.type(),
+                            nameMap,
+                            dependOnMap,
+                            inDependOnDone,
+                            inDependOnProgress,
+                            bean.inherited());
+                }
+                String[] beans = dependsOn.beans();
+                if (beans.length != 0) {
+                    Log.warn(String.format(
+                            "@DependsOn beans() is deprecated. Please use value() instead. (beanName='%s')", beanName));
+                }
+                for (String dependBeanName : beans) {
+                    resolveDependsOnMap(
+                            dependBeanName,
+                            Object.class,
+                            nameMap,
+                            dependOnMap,
+                            inDependOnDone,
+                            inDependOnProgress,
+                            inherited);
+                }
             }
             inDependOnProgress.remove(beanName);
         } else {
@@ -1192,57 +1200,66 @@ final class SimpleContext implements Context {
     }
 
     @NotNull
-    private List<Annotation> loadBootMetadata(@NotNull ContextHolder holder) {
-        Log.debug(() -> "Loading boot metadata ...");
-        Class<? extends ContextHolder> holderClass = holder.getClass();
-        Annotation[] annotations = holderClass.getAnnotations();
+    private List<Annotation> getMetadataAnnotations(@NotNull AnnotatedElement annotatedElement) {
+        Annotation[] annotations = annotatedElement.getAnnotations();
         if (annotations.length == 0) {
-            Log.debug("No boot metadata(s).");
             return Collections.emptyList();
         }
         List<Annotation> result = new LinkedList<>();
-        ClassLoader classLoader = holderClass.getClassLoader();
-        COLLECTION:
         for (Annotation annotation : annotations) {
-            Class<? extends Annotation> annotationType = annotation.annotationType();
-            DependsOn dependsOn = annotationType.getAnnotation(DependsOn.class);
-            if (dependsOn != null) {
-                boolean b = dependsOn.beans().length != 0;
-                if (b) {
-                    Log.warn(String.format(
-                            "@DependsOn beans() is deprecated. Please use value() instead. (holder='%s')",
-                            holderClass.getName()));
-                }
-                if (b || dependsOn.value().length != 0) {
-                    Log.warn("@DependsOn value() or beans() is not supported when booting.");
-                }
-                for (String dependClassName : dependsOn.classes()) {
-                    try {
-                        Class.forName(dependClassName, false, classLoader);
-                    } catch (ClassNotFoundException e) {
-                        Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
-                        continue COLLECTION;
-                    }
-                }
-                for (DependsOn.Property property : dependsOn.properties()) {
-                    ContextProperty contextProperty = getProperty(property.key());
-                    if (contextProperty == null
-                            || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
-                        Log.debug(() -> String.format(
-                                "Depend property '%s' is not set or not equal to '%s', skip.",
-                                property.key(), property.value()));
-                        continue COLLECTION;
-                    }
-                }
-            }
             result.add(annotation);
-            Annotation[] annotationTypeAnnotations = annotationType.getAnnotations();
-            if (annotationTypeAnnotations.length == 0) {
+            Annotation[] annotations1 = annotation.annotationType().getAnnotations();
+            if (annotations1.length == 0) {
                 continue;
             }
-            result.addAll(Arrays.asList(annotationTypeAnnotations));
+            result.addAll(Arrays.asList(annotations1));
         }
-        Log.debug(() -> String.format("Loading %s boot metadata(s) done.", result.size()));
+        return result;
+    }
+
+    @NotNull
+    private List<Annotation> loadBootMetadata(@NotNull ContextHolder holder) {
+        Log.debug(() -> "Loading boot metadata ...");
+        Class<? extends ContextHolder> holderClass = holder.getClass();
+        List<Annotation> result = getMetadataAnnotations(holderClass);
+        if (result.isEmpty()) {
+            Log.debug("No boot metadata(s).");
+        } else {
+            ClassLoader classLoader = holderClass.getClassLoader();
+            for (Annotation annotation : result) {
+                if (annotation instanceof DependsOn) {
+                    DependsOn dependsOn = (DependsOn) annotation;
+                    boolean b = dependsOn.beans().length != 0;
+                    if (b) {
+                        Log.warn(String.format(
+                                "@DependsOn beans() is deprecated. Please use value() instead. (holder='%s')",
+                                holderClass.getName()));
+                    }
+                    if (b || dependsOn.value().length != 0) {
+                        Log.warn("@DependsOn value() or beans() is not supported when booting.");
+                    }
+                    for (String dependClassName : dependsOn.classes()) {
+                        try {
+                            Class.forName(dependClassName, false, classLoader);
+                        } catch (ClassNotFoundException e) {
+                            Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
+                            return Collections.emptyList();
+                        }
+                    }
+                    for (DependsOn.Property property : dependsOn.properties()) {
+                        ContextProperty contextProperty = getProperty(property.key());
+                        if (contextProperty == null
+                                || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
+                            Log.debug(() -> String.format(
+                                    "Depend property '%s' is not set or not equal to '%s', skip.",
+                                    property.key(), property.value()));
+                            return Collections.emptyList();
+                        }
+                    }
+                }
+            }
+            Log.debug(() -> String.format("Loading %s boot metadata(s) done.", result.size()));
+        }
         return result;
     }
 
