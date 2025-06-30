@@ -22,10 +22,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Serialization {
 
+    String name() default "";
+
+    /**
+     * @return 用于序列化的标准，通常使用 'yaml'、'json' 等名称来表示
+     */
     String value();
 }

@@ -63,8 +63,14 @@ public abstract class AutowiredUtils {
     @NotNull
     public static Object autowire(
             @NotNull Context context, @NotNull Class<?> instanceType, @NotNull Constructor<?> constructor) {
+        return autowire(context, instanceType, constructor, true);
+    }
+
+    @NotNull
+    public static Object autowire(
+            @NotNull Context context, @NotNull Class<?> instanceType, @NotNull Constructor<?> constructor, boolean requiredAutowired) {
         return Validation.requireNotNull(
-                autowire(context, null, instanceType, constructor), "Autowired constructed result must not be null.");
+                autowire(context, null, instanceType, constructor, requiredAutowired), "Autowired constructed result must not be null.");
     }
 
     @Nullable
@@ -73,12 +79,21 @@ public abstract class AutowiredUtils {
             @NotNull Object instance,
             @NotNull Class<?> instanceType,
             @NotNull Method method) {
-        return autowire(context, instance, instanceType, (Executable) method);
+        return autowire(context, instance, instanceType, method, true);
+    }
+
+    @Nullable
+    public static Object autowire(
+            @NotNull Context context,
+            @NotNull Object instance,
+            @NotNull Class<?> instanceType,
+            @NotNull Method method, boolean requiredAutowired) {
+        return autowire(context, instance, instanceType, (Executable) method, requiredAutowired);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes", "StatementWithEmptyBody"})
     private static Object autowire(
-            @NotNull Context context, Object instance, @NotNull Class<?> instanceType, @NotNull Executable executable) {
+            @NotNull Context context, Object instance, @NotNull Class<?> instanceType, @NotNull Executable executable, boolean requiredAutowired) {
         Validation.notNull(context, "Context must not be null.");
         Validation.notNull(instanceType, "Instance type must not be null.");
         Validation.notNull(executable, "Executable must not be null.");
@@ -89,17 +104,14 @@ public abstract class AutowiredUtils {
         } else {
             return null;
         }
-        boolean autowiredPresent = executable.isAnnotationPresent(Autowired.class);
-        boolean namedPresent = executable.isAnnotationPresent(Named.class);
+        boolean autowiredPresent = executable.isAnnotationPresent(Autowired.class) || !requiredAutowired;
         String executableName = executable.getName();
         String instanceTypeName = instanceType.getName();
-        if (!autowiredPresent && !namedPresent) {
-            return null;
-        }
-        if (autowiredPresent && namedPresent) {
-            throw new ContextException(String.format(
-                    "Autowire: '%s' executable '%s' is annotated with both @Autowired and @Named.",
+        if (!autowiredPresent) {
+            Log.debug(() -> String.format(
+                    "Autowire: '%s' executable '%s' is not annotated with @Autowired, skip",
                     instanceTypeName, executableName));
+            return null;
         }
         if (Modifier.isStatic(executable.getModifiers())) {
             Log.warn(String.format(

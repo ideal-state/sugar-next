@@ -111,6 +111,8 @@ import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 import team.idealstate.sugar.validate.annotation.Nullable;
 
+import javax.lang.model.element.Name;
+
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 final class SimpleContext implements Context {
 
@@ -854,9 +856,18 @@ final class SimpleContext implements Context {
                     }
                 }
                 Named named = beanType.getAnnotation(Named.class);
-                String beanName;
+                String beanName = "";
                 if (named == null || StringUtils.isNullOrBlank(named.value())) {
-                    beanName = beanType.getName();
+                    try {
+                        Method name = metadata.getClass().getMethod("name");
+                        if (String.class.isAssignableFrom(name.getReturnType())) {
+                            name.setAccessible(true);
+                            beanName = (String) name.invoke(metadata);
+                        }
+                    } catch (NoSuchMethodException ignored) {}
+                    if (StringUtils.isNullOrBlank(beanName)) {
+                        beanName = beanType.getName();
+                    }
                 } else {
                     beanName = named.value();
                 }
@@ -893,10 +904,11 @@ final class SimpleContext implements Context {
                 if (scope == null) {
                     scope = Reflection.annotation(Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
                 }
+                String finalBeanName = beanName;
                 if (Scope.PROTOTYPE.equals(scope.value())) {
-                    provider = () -> doCreate(beanFactory, beanName, dependencies, metadata, beanType);
+                    provider = () -> doCreate(beanFactory, finalBeanName, dependencies, metadata, beanType);
                 } else {
-                    provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependencies, metadata, beanType));
+                    provider = Lazy.of(() -> doCreate(beanFactory, finalBeanName, dependencies, metadata, beanType));
                 }
                 SimpleBean<?> bean = new SimpleBean<>(
                         this, beanName, scope, dependencies, metadata, actualMetadata, (Class) beanType, provider);
@@ -909,24 +921,35 @@ final class SimpleContext implements Context {
                 }
                 Log.info(String.format("%s: '%s'.", metadataType.getSimpleName(), beanName));
                 if (Supplier.class.equals(metadataType)) {
-                    Class<Component> supplyMetadataType = Component.class;
-                    String supplyMetadataName = supplyMetadataType.getSimpleName();
                     for (Method supply : beanType.getMethods()) {
                         String supplyName = supply.getName();
                         if (Modifier.isStatic(supply.getModifiers())) {
                             Log.warn(String.format(
-                                    "%s: '%s' supply method '%s' is static, skip.",
-                                    supplyMetadataName, className, supplyName));
+                                    "'%s' supply method '%s' is static, skip.",
+                                    className, supplyName));
                             continue;
                         }
                         Class supplyBeanType = supply.getReturnType();
-                        Named supplyNamed = supply.getAnnotation(Named.class);
-                        if (supplyNamed == null) {
+                        Annotation[] supplyAnnotations = supply.getAnnotations();
+                        List<Annotation> supplyMetadatas = new ArrayList<>();
+                        for (Annotation annotation : supplyAnnotations) {
+                            if (getBeanFactory(annotation.annotationType()) != null) {
+                                supplyMetadatas.add(annotation);
+                            }
+                        }
+                        if (supplyMetadatas.isEmpty()) {
                             Log.debug(String.format(
-                                    "%s: '%s' supply method '%s' is not annotated with @Named, skip.",
-                                    supplyMetadataName, className, supplyName));
+                                    "'%s' supply method '%s' is not annotated with metadata annotation, skip.",
+                                    className, supplyName));
                             continue;
                         }
+                        Validation.is(
+                                supplyMetadatas.size() == 1,
+                                String.format(
+                                        "'%s' supply method '%s' has multiple annotations of metadata type. %s",
+                                        className, supplyName, supplyMetadatas));
+                        Annotation supplyMetadata = supplyMetadatas.get(0);
+                        String supplyMetadataName = supplyMetadata.annotationType().getSimpleName();
                         if (void.class.equals(supplyBeanType)) {
                             Log.warn(String.format(
                                     "%s: '%s' supply method '%s' return type is void, skip.",
@@ -940,12 +963,22 @@ final class SimpleContext implements Context {
                                 continue;
                             }
                         }
-                        String supplyBeanName = supplyNamed.value();
-                        Validation.notNullOrBlank(
-                                supplyBeanName,
-                                String.format(
-                                        "%s: '%s' supply method '%s' must have a valid bean name.",
-                                        supplyMetadataName, className, supplyName));
+                        Named supplyNamed = supply.getAnnotation(Named.class);
+                        String supplyBeanName = "";
+                        if (supplyNamed == null || StringUtils.isNullOrBlank(supplyNamed.value())) {
+                            try {
+                                Method name = metadata.getClass().getMethod("name");
+                                if (String.class.isAssignableFrom(name.getReturnType())) {
+                                    name.setAccessible(true);
+                                    supplyBeanName = (String) name.invoke(metadata);
+                                }
+                            } catch (NoSuchMethodException ignored) {}
+                            if (StringUtils.isNullOrBlank(supplyBeanName)) {
+                                supplyBeanName = beanType.getName();
+                            }
+                        } else {
+                            supplyBeanName = supplyNamed.value();
+                        }
                         if (nameMap.containsKey(supplyBeanName)) {
                             throw new IllegalStateException(
                                     String.format("Bean name '%s' is duplicated.", supplyBeanName));
@@ -983,17 +1016,17 @@ final class SimpleContext implements Context {
                                     Scope.class, Collections.singletonMap("value", Scope.DEFAULT));
                         }
                         if (Scope.PROTOTYPE.equals(supplyScope.value())) {
-                            supplyProvider = () -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply);
+                            supplyProvider = () -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply, false);
                         } else {
                             supplyProvider =
-                                    Lazy.of(() -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply));
+                                    Lazy.of(() -> AutowiredUtils.autowire(this, bean.getInstance(), beanType, supply, false));
                         }
                         SimpleBean<?> supplyBean = new SimpleBean<>(
                                 this,
                                 supplyBeanName,
                                 supplyScope,
                                 supplyDependencies,
-                                metadata, actualMetadata,
+                                supplyMetadata, supplyMetadata,
                                 supplyBeanType,
                                 supplyProvider);
                         nameMap.put(supplyBeanName, supplyBean);

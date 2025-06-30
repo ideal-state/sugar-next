@@ -23,11 +23,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import team.idealstate.sugar.next.eventbus.Event;
 
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Component
 public @interface Subscriber {
+
+    String name() default "";
 
     Class<? extends Event> event() default Event.class;
 }

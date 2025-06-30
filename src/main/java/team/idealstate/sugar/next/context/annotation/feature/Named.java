@@ -16,15 +16,21 @@
 
 package team.idealstate.sugar.next.context.annotation.feature;
 
+import team.idealstate.sugar.next.context.annotation.component.Component;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * @deprecated 请参考 {@link Component#name()} 和使用其相关替代
+ */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Deprecated
 public @interface Named {
 
     /** @return 组件的主要名称（标识符），为 "" 时则使用所在类的完全限定名称（{@link Class#getName()}），该名称应是上下文唯一且大小写敏感的 */
