@@ -828,11 +828,13 @@ final class SimpleContext implements Context {
                     continue;
                 }
                 Class<?> beanType = javaClass.java(ownerClassLoader);
-                Annotation metadata;
+                Annotation metadata, actualMetadata;
                 if (metadataType.equals(beanFactory.getMetadataType())) {
                     metadata = beanType.getDeclaredAnnotation(metadataType);
+                    actualMetadata = metadata;
                 } else if (Component.class.equals(beanFactory.getMetadataType())) {
                     metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
+                    actualMetadata = beanType.getDeclaredAnnotation(metadataType);
                 } else {
                     throw new UnsupportedOperationException(String.format(
                             "Unsupported metadata type '%s' for bean factory '%s'.", metadataType, beanFactory));
@@ -897,7 +899,7 @@ final class SimpleContext implements Context {
                     provider = Lazy.of(() -> doCreate(beanFactory, beanName, dependencies, metadata, beanType));
                 }
                 SimpleBean<?> bean = new SimpleBean<>(
-                        this, beanName, scope, dependencies, metadataType, metadata, (Class) beanType, provider);
+                        this, beanName, scope, dependencies, metadata, actualMetadata, (Class) beanType, provider);
                 nameMap.put(beanName, bean);
                 beanTypeMap.put(beanType, bean);
                 if (!dependencies.isEmpty()) {
@@ -991,8 +993,7 @@ final class SimpleContext implements Context {
                                 supplyBeanName,
                                 supplyScope,
                                 supplyDependencies,
-                                supplyMetadataType,
-                                metadata,
+                                metadata, actualMetadata,
                                 supplyBeanType,
                                 supplyProvider);
                         nameMap.put(supplyBeanName, supplyBean);

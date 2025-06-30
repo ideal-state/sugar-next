@@ -45,10 +45,10 @@ final class SimpleBean<T> implements Bean<T> {
     private final List<DependsOn> dependencies;
 
     @NonNull
-    private final Class<? extends Annotation> metadataType;
+    private final Annotation metadata;
 
     @NonNull
-    private final Annotation metadata;
+    private final Annotation actualMetadata;
 
     @NonNull
     private final Class<T> type;

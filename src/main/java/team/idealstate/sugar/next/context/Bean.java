@@ -19,6 +19,7 @@ package team.idealstate.sugar.next.context;
 import java.lang.annotation.Annotation;
 import java.util.List;
 
+import team.idealstate.sugar.next.context.annotation.component.Component;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.validate.annotation.NotNull;
@@ -49,16 +50,27 @@ public interface Bean<T> {
     List<DependsOn> getDependencies();
 
     /**
-     * @return 注意：此值不一定满足 <code>equals({@link #getMetadata()}.annotationType())<code/>
+     * @deprecated 过时的内容，请使用 {@link #getMetadata()}.getClass() 代替
      */
+    @Deprecated
     @NotNull
-    Class<? extends Annotation> getMetadataType();
+    default Class<? extends Annotation> getMetadataType() {
+        return getMetadata().getClass();
+    }
 
     /**
-     * @return 注意：此值不一定满足 <code>annotationType().equals({@link #getMetadataType()})<code/>
+     * @return 当前 Bean 的元数据（构造时），
+     * 此值不一定与 {@link #getActualMetadata()} 相等，
+     * 因为它有可能被委托成 {@link Component}
      */
     @NotNull
     Annotation getMetadata();
+
+    /**
+     * @return 当前 Bean 的实际元数据（编译时），此值不一定与 {@link #getMetadata()} 相等
+     */
+    @NotNull
+    Annotation getActualMetadata();
 
     @NotNull
     Class<T> getType();
