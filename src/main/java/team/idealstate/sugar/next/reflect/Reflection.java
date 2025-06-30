@@ -43,6 +43,6 @@ public abstract class Reflection {
         Validation.notNull(mappings, "mappings must not be null");
 
         return (A) Proxy.newProxyInstance(
-                annotationType.getClassLoader(), new Class[] {annotationType}, new InternalAnnotationHandler(mappings));
+                annotationType.getClassLoader(), new Class[] {annotationType}, new InternalAnnotationHandler(annotationType, mappings));
     }
 }

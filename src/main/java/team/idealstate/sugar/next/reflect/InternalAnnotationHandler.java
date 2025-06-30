@@ -16,6 +16,7 @@
 
 package team.idealstate.sugar.next.reflect;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -24,10 +25,12 @@ import team.idealstate.sugar.next.reflect.exception.ReflectionException;
 
 class InternalAnnotationHandler implements ReflectionInvocationHandler {
 
+    private final Class<? extends Annotation> annotationType;
     private final Map<String, Object> mappings;
     private final Map<String, Object> cache = new ConcurrentHashMap<>(16, 0.6F);
 
-    InternalAnnotationHandler(Map<String, Object> mappings) {
+    InternalAnnotationHandler(Class<? extends Annotation> annotationType, Map<String, Object> mappings) {
+        this.annotationType = annotationType;
         this.mappings = mappings;
     }
 
@@ -39,6 +42,9 @@ class InternalAnnotationHandler implements ReflectionInvocationHandler {
             return ret;
         }
         String methodName = method.getName();
+        if ("annotationType".equals(methodName)) {
+            return annotationType;
+        }
         if (cache.containsKey(methodName)) {
             return cache.get(methodName);
         }
