@@ -90,9 +90,6 @@ final class SimpleContextLibraryLoader {
             return;
         }
         Class<? extends ContextHolder> holderType = holder.getClass();
-        if (!holderType.isAnnotationPresent(EnableSugar.class)) {
-            return;
-        }
         CodeSource codeSource = holderType.getProtectionDomain().getCodeSource();
         if (codeSource == null) {
             return;
