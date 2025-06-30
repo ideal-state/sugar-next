@@ -18,7 +18,6 @@ package team.idealstate.sugar.next.context;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;

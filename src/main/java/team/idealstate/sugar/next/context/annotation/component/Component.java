@@ -22,10 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * 成员注释说明：
- * （必须成员）：表示成员属于必须标准，任何三方的组件注解都应该实现此方法，除非你想让其始终为默认值
- */
+/** 成员注释说明： （必须成员）：表示成员属于必须标准，任何三方的组件注解都应该实现此方法，除非你想让其始终为默认值 */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -33,6 +30,7 @@ public @interface Component {
 
     /**
      * （必须成员）
+     *
      * @return 组件名称，通常它在其所在上下文中是唯一且大小写敏感的，且通常其默认值为组件类的完全限定名称。
      */
     String name() default "";

@@ -49,7 +49,6 @@ import team.idealstate.sugar.maven.resolver.api.DependencyResolver;
 import team.idealstate.sugar.maven.resolver.api.MavenResolver;
 import team.idealstate.sugar.maven.resolver.api.ResolvedArtifact;
 import team.idealstate.sugar.maven.resolver.spi.MavenResolverLoader;
-import team.idealstate.sugar.next.context.annotation.feature.EnableSugar;
 import team.idealstate.sugar.next.context.exception.ContextException;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;

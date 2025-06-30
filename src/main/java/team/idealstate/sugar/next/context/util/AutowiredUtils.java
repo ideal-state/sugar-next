@@ -33,7 +33,6 @@ import team.idealstate.sugar.next.context.Bean;
 import team.idealstate.sugar.next.context.Context;
 import team.idealstate.sugar.next.context.ContextHolder;
 import team.idealstate.sugar.next.context.annotation.feature.Autowired;
-import team.idealstate.sugar.next.context.annotation.feature.Named;
 import team.idealstate.sugar.next.context.annotation.feature.Owned;
 import team.idealstate.sugar.next.context.annotation.feature.Qualifier;
 import team.idealstate.sugar.next.context.exception.ContextException;
@@ -68,9 +67,13 @@ public abstract class AutowiredUtils {
 
     @NotNull
     public static Object autowire(
-            @NotNull Context context, @NotNull Class<?> instanceType, @NotNull Constructor<?> constructor, boolean requiredAutowired) {
+            @NotNull Context context,
+            @NotNull Class<?> instanceType,
+            @NotNull Constructor<?> constructor,
+            boolean requiredAutowired) {
         return Validation.requireNotNull(
-                autowire(context, null, instanceType, constructor, requiredAutowired), "Autowired constructed result must not be null.");
+                autowire(context, null, instanceType, constructor, requiredAutowired),
+                "Autowired constructed result must not be null.");
     }
 
     @Nullable
@@ -87,13 +90,18 @@ public abstract class AutowiredUtils {
             @NotNull Context context,
             @NotNull Object instance,
             @NotNull Class<?> instanceType,
-            @NotNull Method method, boolean requiredAutowired) {
+            @NotNull Method method,
+            boolean requiredAutowired) {
         return autowire(context, instance, instanceType, (Executable) method, requiredAutowired);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes", "StatementWithEmptyBody"})
     private static Object autowire(
-            @NotNull Context context, Object instance, @NotNull Class<?> instanceType, @NotNull Executable executable, boolean requiredAutowired) {
+            @NotNull Context context,
+            Object instance,
+            @NotNull Class<?> instanceType,
+            @NotNull Executable executable,
+            boolean requiredAutowired) {
         Validation.notNull(context, "Context must not be null.");
         Validation.notNull(instanceType, "Instance type must not be null.");
         Validation.notNull(executable, "Executable must not be null.");

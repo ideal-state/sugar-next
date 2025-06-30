@@ -22,9 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * @deprecated 原生 Sugar 的相关功能不再需要此注解启用
- */
+/** @deprecated 原生 Sugar 的相关功能不再需要此注解启用 */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

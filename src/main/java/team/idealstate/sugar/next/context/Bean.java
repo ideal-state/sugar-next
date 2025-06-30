@@ -18,7 +18,6 @@ package team.idealstate.sugar.next.context;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
-
 import team.idealstate.sugar.next.context.annotation.component.Component;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Scope;
@@ -36,9 +35,7 @@ public interface Bean<T> {
     @NotNull
     Scope getScope();
 
-    /**
-     * @deprecated 不完整的依赖项数据，请使用 {@link #getDependencies()} 代替
-     */
+    /** @deprecated 不完整的依赖项数据，请使用 {@link #getDependencies()} 代替 */
     @Deprecated
     @Nullable
     default DependsOn getDependsOn() {
@@ -49,26 +46,18 @@ public interface Bean<T> {
     @NotNull
     List<DependsOn> getDependencies();
 
-    /**
-     * @deprecated 过时的内容，请使用 {@link #getMetadata()}.getClass() 代替
-     */
+    /** @deprecated 过时的内容，请使用 {@link #getMetadata()}.getClass() 代替 */
     @Deprecated
     @NotNull
     default Class<? extends Annotation> getMetadataType() {
         return getMetadata().getClass();
     }
 
-    /**
-     * @return 当前 Bean 的元数据（构造时），
-     * 此值不一定与 {@link #getActualMetadata()} 相等，
-     * 因为它有可能被委托成 {@link Component}
-     */
+    /** @return 当前 Bean 的元数据（构造时）， 此值不一定与 {@link #getActualMetadata()} 相等， 因为它有可能被委托成 {@link Component} */
     @NotNull
     Annotation getMetadata();
 
-    /**
-     * @return 当前 Bean 的实际元数据（编译时），此值不一定与 {@link #getMetadata()} 相等
-     */
+    /** @return 当前 Bean 的实际元数据（编译时），此值不一定与 {@link #getMetadata()} 相等 */
     @NotNull
     Annotation getActualMetadata();
 
