@@ -21,7 +21,6 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
-import lombok.NonNull;
 import team.idealstate.sugar.next.context.annotation.feature.DependsOn;
 import team.idealstate.sugar.next.context.annotation.feature.Scope;
 import team.idealstate.sugar.next.function.closure.Provider;
@@ -31,28 +30,28 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 @Data
 final class SimpleBean<T> implements Bean<T> {
 
-    @NonNull
+    @NotNull
     private final Context context;
 
-    @NonNull
+    @NotNull
     private final String name;
 
-    @NonNull
+    @NotNull
     private final Scope scope;
 
-    @NonNull
+    @NotNull
     private final List<DependsOn> dependencies;
 
-    @NonNull
+    @NotNull
     private final Annotation metadata;
 
-    @NonNull
+    @NotNull
     private final Annotation actualMetadata;
 
-    @NonNull
+    @NotNull
     private final Class<T> type;
 
-    @NonNull
+    @NotNull
     @Getter(AccessLevel.PRIVATE)
     private final Provider<T> provider;
 

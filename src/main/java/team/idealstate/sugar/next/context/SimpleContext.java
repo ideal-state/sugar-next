@@ -56,7 +56,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.banner.Banner;
 import team.idealstate.sugar.bundled.Bundled;
@@ -131,13 +130,13 @@ final class SimpleContext implements Context {
     private static final int STATUS_ENABLED = 3;
     private static final int STATUS_DISABLED = 4;
 
-    @NonNull
+    @NotNull
     private final ContextHolder contextHolder;
 
-    @NonNull
+    @NotNull
     private final ContextLifecycle contextLifecycle;
 
-    @NonNull
+    @NotNull
     private final EventBus eventBus;
 
     private volatile int status = STATUS_DESTROYED;
@@ -781,7 +780,8 @@ final class SimpleContext implements Context {
             for (String className : classes) {
                 Log.debug(() -> String.format("Class name: %s", className));
                 JavaClass javaClass = Java.typeof(className, javaCache, ownerClassLoader);
-                JavaAnnotation[] javaAnnotations = javaClass.getAnnotations();
+                JavaAnnotation[] annotations = javaClass.getAnnotations();
+                JavaAnnotation[] javaAnnotations = annotations;
                 Set<JavaAnnotation> maybeMetadataAnnotations = Collections.emptySet();
                 COLLECTION_METADATA:
                 for (JavaAnnotation javaAnnotation : javaAnnotations) {
@@ -827,13 +827,40 @@ final class SimpleContext implements Context {
                     Log.debug(String.format("No bean factory for metadata '%s', skip", metadataType));
                     continue;
                 }
+                String dependsOnClassName = DependsOn.class.getName();
+                for (JavaAnnotation annotation : annotations) {
+                    JavaClass annotationType = annotation.getAnnotationType();
+                    if (!dependsOnClassName.equals(annotationType.getName())) {
+                        continue;
+                    }
+                    DependsOn dependsOn = annotation.java(ownerClassLoader);
+                    for (String dependClassName : dependsOn.classes()) {
+                        try {
+                            Class.forName(dependClassName, false, ownerClassLoader);
+                        } catch (ClassNotFoundException e) {
+                            Log.debug(() -> String.format("No found depend class '%s', skip.", dependClassName));
+                            continue COLLECTION;
+                        }
+                    }
+                    for (DependsOn.Property property : dependsOn.properties()) {
+                        ContextProperty contextProperty = getProperty(property.key());
+                        if (contextProperty == null
+                                || (property.strict() && !property.value().equals(contextProperty.getValue()))) {
+                            Log.debug(() -> String.format(
+                                    "Depend property '%s' is not set or not equal to" + " '%s', skip.",
+                                    property.key(), property.value()));
+                            continue COLLECTION;
+                        }
+                    }
+                }
                 Class<?> beanType = javaClass.java(ownerClassLoader);
                 Annotation metadata, actualMetadata;
+                ClassLoader beanTypeClassLoader = beanType.getClassLoader();
                 if (metadataType.equals(beanFactory.getMetadataType())) {
                     metadata = beanType.getDeclaredAnnotation(metadataType);
                     actualMetadata = metadata;
                 } else if (Component.class.equals(beanFactory.getMetadataType())) {
-                    metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
+                    metadata = maybeComponentAnnotation.java(beanTypeClassLoader);
                     actualMetadata = beanType.getDeclaredAnnotation(metadataType);
                 } else {
                     throw new UnsupportedOperationException(String.format(
@@ -877,7 +904,6 @@ final class SimpleContext implements Context {
                         .filter(DependsOn.class::isInstance)
                         .map(DependsOn.class::cast)
                         .collect(Collectors.toList());
-                ClassLoader beanTypeClassLoader = beanType.getClassLoader();
                 for (DependsOn dependsOn : dependencies) {
                     for (String dependClassName : dependsOn.classes()) {
                         try {

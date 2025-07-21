@@ -16,7 +16,6 @@
 
 package team.idealstate.sugar.next.database;
 
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.validate.annotation.NotNull;
@@ -24,10 +23,10 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 /** 此接口应交给自动化框架使用，而不是开发者手动使用 */
 @RequiredArgsConstructor
 public final class TransactionSession implements DatabaseSession {
-    @NonNull
+    @NotNull
     private final DatabaseSession databaseSession;
 
-    @NonNull
+    @NotNull
     private final Runnable closer;
 
     @NotNull

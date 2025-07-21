@@ -18,7 +18,6 @@ package team.idealstate.sugar.next.context.factory;
 
 import java.lang.annotation.Annotation;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.next.context.BeanFactory;
 import team.idealstate.sugar.next.context.Context;
@@ -28,7 +27,7 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class AbstractBeanFactory<M extends Annotation> implements BeanFactory<M> {
 
-    @NonNull
+    @NotNull
     private final Class<M> metadataType;
 
     @NotNull

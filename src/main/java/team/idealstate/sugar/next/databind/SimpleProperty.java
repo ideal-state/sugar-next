@@ -17,14 +17,13 @@
 package team.idealstate.sugar.next.databind;
 
 import lombok.Data;
-import lombok.NonNull;
 import team.idealstate.sugar.string.StringUtils;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 
 @Data
 final class SimpleProperty<V> implements Property<V> {
-    @NonNull
+    @NotNull
     private final String key;
 
     private final V value;

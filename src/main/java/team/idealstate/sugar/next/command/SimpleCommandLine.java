@@ -37,7 +37,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
 import lombok.Data;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.logging.Log;
 import team.idealstate.sugar.next.command.annotation.CommandArgument;
@@ -57,15 +56,15 @@ final class SimpleCommandLine implements CommandLine {
     public static final String PERMISSION_DELIMITER = ".";
     private final int depth;
 
-    @NonNull
+    @NotNull
     private final String name;
 
-    @NonNull
+    @NotNull
     private final List<String> permission;
 
     private final boolean open;
 
-    @NonNull
+    @NotNull
     private final Class<?> argumentType;
 
     private final CommandArgument.Converter<?> converter;

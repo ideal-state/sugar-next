@@ -61,7 +61,7 @@ public interface JavaAnnotation extends Java<Annotation> {
     @NotNull
     Set<String> getMappingNames();
 
-    @NotNull
+    @Nullable
     <V> V getMappingValue(@NotNull String mappingName);
 
     @NotNull
@@ -69,7 +69,10 @@ public interface JavaAnnotation extends Java<Annotation> {
         Set<String> mappingNames = getMappingNames();
         Map<String, Object> mappings = new HashMap<>(mappingNames.size());
         for (String mappingName : mappingNames) {
-            mappings.put(mappingName, getMappingValue(mappingName));
+            Object value = getMappingValue(mappingName);
+            if (value != null) {
+                mappings.put(mappingName, value);
+            }
         }
         return mappings;
     }

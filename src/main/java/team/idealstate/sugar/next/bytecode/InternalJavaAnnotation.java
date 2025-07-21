@@ -71,7 +71,7 @@ class InternalJavaAnnotation implements JavaAnnotation {
         return new HashSet<>(mappings.keySet());
     }
 
-    @NotNull
+    @Nullable
     @Override
     public <V> V getMappingValue(@NotNull String mappingName) {
         Object value = mappings.get(mappingName);

@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import team.idealstate.sugar.logging.Log;
@@ -138,7 +137,7 @@ final class SimpleEventBus implements EventBus {
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     @ToString
     private static final class Publishing {
-        @NonNull
+        @NotNull
         private final Event event;
 
         @Override

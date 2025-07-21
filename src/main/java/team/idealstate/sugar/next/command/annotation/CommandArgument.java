@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Data;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.next.command.CommandContext;
 import team.idealstate.sugar.next.command.example.ExampleCommand;
@@ -143,7 +142,7 @@ public @interface CommandArgument {
                     }
                 });
 
-        @NonNull
+        @NotNull
         private final Class<T> targetType;
 
         @Override

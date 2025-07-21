@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import team.idealstate.sugar.next.command.annotation.CommandArgument;
 import team.idealstate.sugar.next.command.exception.CommandException;
@@ -30,10 +29,10 @@ import team.idealstate.sugar.validate.annotation.NotNull;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 final class SimpleCommandExecutor implements CommandExecutor {
 
-    @NonNull
+    @NotNull
     private final Object command;
 
-    @NonNull
+    @NotNull
     private final Method method;
 
     @Override
