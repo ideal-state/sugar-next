@@ -695,11 +695,11 @@ final class SimpleContext implements Context {
             Log.debug(() -> String.format(
                     "(%s ms) created bean. (beanName='%s', runtimeType='%s')",
                     System.currentTimeMillis() - start[0], beanName, proxy.getClass()));
-            inProgress.remove(beanType);
         } finally {
             if (result != null) {
                 instances.add(result);
             }
+            inProgress.remove(beanType);
         }
         return result;
     }
