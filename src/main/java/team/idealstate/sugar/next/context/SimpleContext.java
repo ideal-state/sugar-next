@@ -829,7 +829,18 @@ final class SimpleContext implements Context {
                 }
                 String dependsOnClassName = DependsOn.class.getName();
                 for (JavaAnnotation annotation : annotations) {
-                    JavaClass annotationType = annotation.getAnnotationType();
+                    JavaClass annotationType;
+                    try {
+                        annotationType = annotation.getAnnotationType();
+                    } catch (BytecodeParsingException e) {
+                        Throwable cause = e.getCause();
+                        if (cause instanceof ClassNotFoundException) {
+                            if (!e.getMessage().contains(dependsOnClassName)) {
+                                continue;
+                            }
+                        }
+                        throw e;
+                    }
                     if (!dependsOnClassName.equals(annotationType.getName())) {
                         continue;
                     }
@@ -860,7 +871,7 @@ final class SimpleContext implements Context {
                     metadata = beanType.getDeclaredAnnotation(metadataType);
                     actualMetadata = metadata;
                 } else if (Component.class.equals(beanFactory.getMetadataType())) {
-                    metadata = maybeComponentAnnotation.java(beanTypeClassLoader);
+                    metadata = Reflection.annotation(Component.class, maybeComponentAnnotation.getMappings());
                     actualMetadata = beanType.getDeclaredAnnotation(metadataType);
                 } else {
                     throw new UnsupportedOperationException(String.format(
