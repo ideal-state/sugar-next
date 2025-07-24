@@ -21,7 +21,9 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import team.idealstate.sugar.next.lang.WrappedType;
 import team.idealstate.sugar.next.reflect.exception.ReflectionException;
+import team.idealstate.sugar.validate.annotation.NotNull;
 
 class InternalAnnotationHandler implements ReflectionInvocationHandler {
 
@@ -34,7 +36,20 @@ class InternalAnnotationHandler implements ReflectionInvocationHandler {
         this.mappings = mappings;
     }
 
-    @SuppressWarnings("SuspiciousSystemArraycopy")
+    private static <T> T assignable(@NotNull Class<T> type, @NotNull Object value) {
+        Class<?> valueType = value.getClass();
+        boolean assignableFrom = type.isAssignableFrom(valueType);
+        if (!assignableFrom) {
+            try {
+                return WrappedType.of(type).unwrap(value);
+            } catch (Throwable e) {
+                throw new ReflectionException(
+                        String.format("Value '%s' cannot be cast to type '%s'.", value, type.getName()), e);
+            }
+        }
+        return type.cast(value);
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         Object ret = ReflectionInvocationHandler.super.invoke(proxy, method, args);
@@ -58,27 +73,24 @@ class InternalAnnotationHandler implements ReflectionInvocationHandler {
 
         Class<?> returnType = method.getReturnType();
         Class<?> valueType = value.getClass();
-        CHECK_RETURN_TYPE:
-        if (!returnType.isAssignableFrom(valueType)) {
-            THROW_EX:
+        try {
             if (returnType.isArray() && valueType.isArray()) {
                 Class<?> componentType = returnType.getComponentType();
-                if (!componentType.isAssignableFrom(valueType.getComponentType())) {
-                    int length = Array.getLength(value);
-                    for (int i = 0; i < length; i++) {
-                        Object arrValue = Array.get(value, i);
-                        if (!componentType.isInstance(arrValue)) {
-                            break THROW_EX;
-                        }
-                    }
-                    Object arr = Array.newInstance(componentType, length);
-                    System.arraycopy(value, 0, arr, 0, length);
-                    value = arr;
+                int length = Array.getLength(value);
+                Object array = Array.newInstance(componentType, length);
+                for (int i = 0; i < length; i++) {
+                    Array.set(array, i, assignable(componentType, Array.get(value, i)));
                 }
-                break CHECK_RETURN_TYPE;
+                value = array;
+            } else {
+                value = assignable(returnType, value);
             }
+        } catch (ReflectionException e) {
             throw new ReflectionException(
-                    "Return type of method " + methodName + " must be assignable from mappings value.");
+                    String.format(
+                            "Return type '%s' of method '%s' must be assignable from mappings value type '%s'.",
+                            returnType.getName(), methodName, valueType.getName()),
+                    e);
         }
 
         cache.put(methodName, value);
