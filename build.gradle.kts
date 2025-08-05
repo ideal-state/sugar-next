@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    api(libs.sugar)
+    shadow(libs.sugar)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
