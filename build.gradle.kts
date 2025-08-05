@@ -44,15 +44,14 @@ repositories {
 
 dependencies {
     shadow(libs.sugar)
+    annotationProcessor(libs.sugar)
+    testCompileOnly(libs.sugar)
+    testAnnotationProcessor(libs.sugar)
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)
-    compileOnly(libs.sugar)
-    annotationProcessor(libs.sugar)
-    testCompileOnly(libs.sugar)
-    testAnnotationProcessor(libs.sugar)
 }
 
 publishing {
