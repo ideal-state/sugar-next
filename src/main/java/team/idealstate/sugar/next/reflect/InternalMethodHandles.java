@@ -16,11 +16,11 @@
 
 package team.idealstate.sugar.next.reflect;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import team.idealstate.sugar.next.reflect.exception.ReflectionException;
 import team.idealstate.sugar.validate.annotation.NotNull;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 
 @SuppressWarnings("JavaReflectionMemberAccess")
 abstract class InternalMethodHandles {
@@ -29,15 +29,30 @@ abstract class InternalMethodHandles {
             | MethodHandles.Lookup.PROTECTED
             | MethodHandles.Lookup.PACKAGE
             | MethodHandles.Lookup.PUBLIC;
-    private static final Constructor<MethodHandles.Lookup> JDK_8_LOOKUP_CONSTRUCTOR;
+    private static final MethodHandle JDK_9_PRIVATE_LOOKUP_CREATOR;
+    private static final MethodHandle JDK_8_PRIVATE_LOOKUP_CREATOR;
 
     static {
+        MethodHandle jdk8PrivateLookupCreator;
+        MethodHandle jdk9PrivateLookupCreator;
         try {
-            JDK_8_LOOKUP_CONSTRUCTOR = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+            java.lang.reflect.Constructor<?> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+            constructor.setAccessible(true);
+            jdk8PrivateLookupCreator = lookup().unreflectConstructor(constructor);
+            jdk9PrivateLookupCreator = null;
         } catch (NoSuchMethodException e) {
+            try {
+                java.lang.reflect.Method method = MethodHandles.class.getDeclaredMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
+                jdk9PrivateLookupCreator = lookup().unreflect(method);
+                jdk8PrivateLookupCreator = null;
+            } catch (NoSuchMethodException | IllegalAccessException ex) {
+                throw new ReflectionException(ex);
+            }
+        } catch (IllegalAccessException e) {
             throw new ReflectionException(e);
         }
-        JDK_8_LOOKUP_CONSTRUCTOR.setAccessible(true);
+        JDK_8_PRIVATE_LOOKUP_CREATOR = jdk8PrivateLookupCreator;
+        JDK_9_PRIVATE_LOOKUP_CREATOR = jdk9PrivateLookupCreator;
     }
 
     @NotNull
@@ -53,8 +68,11 @@ abstract class InternalMethodHandles {
     @NotNull
     public static MethodHandles.Lookup privateLookup(@NotNull Class<?> lookupClass) {
         try {
-            return JDK_8_LOOKUP_CONSTRUCTOR.newInstance(lookupClass, ALLOWED_MODES);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            if (JDK_8_PRIVATE_LOOKUP_CREATOR == null) {
+                return (MethodHandles.Lookup) JDK_9_PRIVATE_LOOKUP_CREATOR.invokeWithArguments(lookupClass, lookup());
+            }
+            return (MethodHandles.Lookup) JDK_8_PRIVATE_LOOKUP_CREATOR.invokeWithArguments(lookupClass, ALLOWED_MODES);
+        } catch (Throwable e) {
             throw new ReflectionException(e);
         }
     }

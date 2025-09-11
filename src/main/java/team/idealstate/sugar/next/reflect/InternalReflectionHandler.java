@@ -56,15 +56,18 @@ class InternalReflectionHandler implements ReflectionInvocationHandler {
 
     @NotNull
     private static Class<?> getDeclaringClass(
-            Class<?> cls, String name, ClassLoader classLoader, Reflect defaultClass) {
+            Class<?> cls, String name, ClassLoader classLoader, Object target, Reflect defaultClass) {
         if (cls == null || void.class.equals(cls)) {
             try {
                 return Class.forName(name, false, classLoader);
             } catch (ClassNotFoundException e) {
                 if (defaultClass == null) {
+                    if (target != null) {
+                        return target.getClass();
+                    }
                     throw new ReflectionException(e);
                 }
-                return getDeclaringClass(defaultClass.value(), defaultClass.name(), classLoader, null);
+                return getDeclaringClass(defaultClass.value(), defaultClass.name(), classLoader, target, null);
             }
         }
         return cls;
@@ -166,6 +169,7 @@ class InternalReflectionHandler implements ReflectionInvocationHandler {
                                     reflectConstructor.value(),
                                     reflectConstructor.declaringClass(),
                                     method.getDeclaringClass().getClassLoader(),
+                                    null,
                                     this.reflect);
 
                             if (!method.getReturnType().isAssignableFrom(declaringClass)) {
@@ -237,6 +241,7 @@ class InternalReflectionHandler implements ReflectionInvocationHandler {
                                     reflectField.value(),
                                     reflectField.declaringClass(),
                                     proxy.getClass().getClassLoader(),
+                                    target,
                                     this.reflect);
                             String memberName = reflectField.name();
                             if (StringUtils.isEmpty(memberName)) {
@@ -314,6 +319,7 @@ class InternalReflectionHandler implements ReflectionInvocationHandler {
                                     reflectMethod.value(),
                                     reflectMethod.declaringClass(),
                                     proxy.getClass().getClassLoader(),
+                                    target,
                                     this.reflect);
                             String memberName = reflectMethod.name();
                             if (StringUtils.isEmpty(memberName)) {
