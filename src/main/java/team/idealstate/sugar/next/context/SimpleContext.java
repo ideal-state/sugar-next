@@ -601,6 +601,10 @@ final class SimpleContext implements Context {
                         String name = v.value();
                         Bean<?> bean = getBean(name, v.type(), v.inherited());
                         Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                        assert bean != null;
+                        if (Scope.SINGLETON.equals(bean.getScope().value())) {
+                            bean.getInstance();
+                        }
                     }
                     String[] beans = dependency.beans();
                     if (beans.length != 0) {
@@ -611,6 +615,10 @@ final class SimpleContext implements Context {
                     for (String name : beans) {
                         Bean<Object> bean = getBean(name, Object.class, true);
                         Validation.notNull(bean, String.format("Depend bean '%s' must not be null.", name));
+                        assert bean != null;
+                        if (Scope.SINGLETON.equals(bean.getScope().value())) {
+                            bean.getInstance();
+                        }
                     }
                     Log.debug(() -> String.format(
                             "(%s ms) created depend beans. (dependBeans='%s')",
@@ -1175,9 +1183,6 @@ final class SimpleContext implements Context {
         }
         for (SimpleBean<?> bean : beanTypeMap.values()) {
             String scope = bean.getScope().value();
-            if (StringUtils.isBlank(scope)) {
-                scope = Scope.DEFAULT;
-            }
             if (Scope.SINGLETON.equals(scope)) {
                 bean.getInstance();
             }
