@@ -16,6 +16,13 @@
 
 package team.idealstate.sugar.next.calculate;
 
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -27,23 +34,14 @@ import team.idealstate.sugar.next.calculate.operation.standard.StandardOperator;
 import team.idealstate.sugar.validate.Validation;
 import team.idealstate.sugar.validate.annotation.NotNull;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-
-/**
- * 轻量安全且快速的预编译数值表达式
- */
+/** 轻量安全且快速的预编译数值表达式 */
 @EqualsAndHashCode
 @ToString
 public final class Expression implements Cloneable {
 
     @Getter
     private final String expression;
+
     private final Operator[] operators;
 
     private final transient Object lock = new Object();
@@ -148,9 +146,7 @@ public final class Expression implements Cloneable {
         return calculate(context).doubleValue() > 0;
     }
 
-    /**
-     * @see Expression#isTrue(Map)
-     */
+    /** @see Expression#isTrue(Map) */
     public boolean isTrue() {
         return isTrue(Collections.emptyMap());
     }
@@ -163,16 +159,12 @@ public final class Expression implements Cloneable {
         return !isTrue(context);
     }
 
-    /**
-     * @see Expression#isFalse(Map)
-     */
+    /** @see Expression#isFalse(Map) */
     public boolean isFalse() {
         return isFalse(Collections.emptyMap());
     }
 
-    /**
-     * @return 深拷贝
-     */
+    /** @return 深拷贝 */
     @Override
     @SuppressWarnings("MethodDoesntCallSuperMethod")
     public Expression clone() {

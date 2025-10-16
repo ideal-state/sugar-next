@@ -1,9 +1,25 @@
+/*
+ *    Copyright 2025 ideal-state
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package team.idealstate.sugar.next.test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import team.idealstate.sugar.next.calculate.Expression;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class TestUnit {
 
@@ -22,7 +38,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "!5";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -35,7 +51,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         long result = expression.calculate().longValue();
         assertEquals(-16L, result);
-        
+
         input = "~-1";
         expression = new Expression(input);
         result = expression.calculate().longValue();
@@ -48,7 +64,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(5.0, result, 0.001);
-        
+
         input = "+(-3.14)";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -61,7 +77,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(-5.0, result, 0.001);
-        
+
         input = "-(-7.5)";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -75,7 +91,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(26.0, result, 0.001);
-        
+
         input = "-3 * -8";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -88,7 +104,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(5.0, result, 0.001);
-        
+
         input = "-15.5 / -2";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -101,7 +117,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(2.0, result, 0.001);
-        
+
         input = "-17 % 5";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -114,7 +130,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(256.0, result, 0.001);
-        
+
         input = "4 ** 0.5";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -127,7 +143,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(39.2, result, 0.001);
-        
+
         input = "-5 + 3";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -140,7 +156,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(32.5, result, 0.001);
-        
+
         input = "10 - -5";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -153,7 +169,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         long result = expression.calculate().longValue();
         assertEquals(64L, result);
-        
+
         input = "-8 << 1";
         expression = new Expression(input);
         result = expression.calculate().longValue();
@@ -166,7 +182,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         long result = expression.calculate().longValue();
         assertEquals(4L, result);
-        
+
         input = "-8 >> 1";
         expression = new Expression(input);
         result = expression.calculate().longValue();
@@ -195,7 +211,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "5 > 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -208,7 +224,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "15 < 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -221,12 +237,12 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "15 >= 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "10 >= 15";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -239,12 +255,12 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "10 <= 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "15 <= 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -257,7 +273,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "15 == 10";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -270,7 +286,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(1.0, result, 0.001);
-        
+
         input = "15 != 15";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
@@ -296,7 +312,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         long result = expression.calculate().longValue();
         assertEquals(6L, result);
-        
+
         input = "15 ^ 7";
         expression = new Expression(input);
         result = expression.calculate().longValue();
@@ -309,7 +325,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         long result = expression.calculate().longValue();
         assertEquals(14L, result);
-        
+
         input = "8 | 3";
         expression = new Expression(input);
         result = expression.calculate().longValue();
@@ -396,7 +412,7 @@ public class TestUnit {
         double result = expression.calculate().doubleValue();
         assertEquals(51.6, result, 0.1);
     }
-    
+
     // 边界值测试
     @Test
     public void testBoundaryValues() {
@@ -404,18 +420,18 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(0.0, result, 0.001);
-        
+
         input = "10000 + 0";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
         assertEquals(10000.0, result, 0.001);
-        
+
         input = "-10000 - 0";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();
         assertEquals(-10000.0, result, 0.001);
     }
-    
+
     // 括号优先级测试
     @Test
     public void testParenthesesPriority() {
@@ -423,7 +439,7 @@ public class TestUnit {
         Expression expression = new Expression(input);
         double result = expression.calculate().doubleValue();
         assertEquals(70.0, result, 0.001);
-        
+
         input = "((2 + 3) * (4 + 5))";
         expression = new Expression(input);
         result = expression.calculate().doubleValue();

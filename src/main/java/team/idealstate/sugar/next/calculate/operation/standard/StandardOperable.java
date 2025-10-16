@@ -1,10 +1,20 @@
-package team.idealstate.sugar.next.calculate.operation.standard;
+/*
+ *    Copyright 2025 ideal-state
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
-import team.idealstate.sugar.next.calculate.exception.ExpressionOperationException;
-import team.idealstate.sugar.string.StringUtils;
-import team.idealstate.sugar.validate.Validation;
-import team.idealstate.sugar.validate.annotation.NotNull;
-import team.idealstate.sugar.validate.annotation.Nullable;
+package team.idealstate.sugar.next.calculate.operation.standard;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -13,12 +23,19 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import team.idealstate.sugar.next.calculate.exception.ExpressionOperationException;
+import team.idealstate.sugar.string.StringUtils;
+import team.idealstate.sugar.validate.Validation;
+import team.idealstate.sugar.validate.annotation.NotNull;
+import team.idealstate.sugar.validate.annotation.Nullable;
 
 interface StandardOperable {
 
     RoundingMode DEFAULT_ROUNDING_MODE = RoundingMode.HALF_UP;
-    Set<Class<?>> STD_INTEGER_CLASSES = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class)));
-    Set<Class<?>> STD_DECIMAL_CLASSES = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(Float.class, Double.class)));
+    Set<Class<?>> STD_INTEGER_CLASSES = Collections.unmodifiableSet(
+            new LinkedHashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class)));
+    Set<Class<?>> STD_DECIMAL_CLASSES =
+            Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(Float.class, Double.class)));
 
     static int asInt(boolean value) {
         return value ? 1 : 0;
@@ -269,7 +286,8 @@ interface StandardOperable {
         if (isStandardInteger(first) && isStandardInteger(second)) {
             return first.longValue() >>> second.longValue();
         }
-        throw new ExpressionOperationException("bitwise unsigned shift right operation is supported only with standard integers.");
+        throw new ExpressionOperationException(
+                "bitwise unsigned shift right operation is supported only with standard integers.");
     }
 
     @SuppressWarnings("DuplicatedCode")

@@ -1,17 +1,20 @@
-package team.idealstate.sugar.next.calculate;
+/*
+ *    Copyright 2025 ideal-state
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Setter;
-import lombok.val;
-import team.idealstate.sugar.next.calculate.exception.ExpressionException;
-import team.idealstate.sugar.next.calculate.exception.ExpressionSyntaxException;
-import team.idealstate.sugar.next.calculate.operation.Operator;
-import team.idealstate.sugar.next.calculate.operation.OperatorArity;
-import team.idealstate.sugar.next.calculate.operation.OperatorAssociativity;
-import team.idealstate.sugar.validate.annotation.NotNull;
-import team.idealstate.sugar.validate.annotation.Nullable;
+package team.idealstate.sugar.next.calculate;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -21,13 +24,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Setter;
+import team.idealstate.sugar.next.calculate.exception.ExpressionException;
+import team.idealstate.sugar.next.calculate.exception.ExpressionSyntaxException;
+import team.idealstate.sugar.next.calculate.operation.Operator;
+import team.idealstate.sugar.next.calculate.operation.OperatorArity;
+import team.idealstate.sugar.next.calculate.operation.OperatorAssociativity;
+import team.idealstate.sugar.validate.annotation.NotNull;
+import team.idealstate.sugar.validate.annotation.Nullable;
 
 final class Lexer {
 
@@ -43,7 +56,8 @@ final class Lexer {
 
     public Lexer(@NotNull String expression, @NotNull Operator... operators) {
         this.expression = expression;
-        Comparator<Operator> comparator = Comparator.comparingInt(o -> o.getLiteral().length());
+        Comparator<Operator> comparator =
+                Comparator.comparingInt(o -> o.getLiteral().length());
         this.operators = Arrays.stream(operators)
                 .sorted(comparator.reversed())
                 .collect(Collectors.toMap(
@@ -60,8 +74,7 @@ final class Lexer {
                             }));
                             return m1;
                         },
-                        LinkedHashMap::new
-                ));
+                        LinkedHashMap::new));
         this.position = 0;
         this.line = 0;
         this.column = 0;
@@ -129,9 +142,7 @@ final class Lexer {
         if (isIdentifierStart(currentChar)) {
             return readIdentifier();
         }
-        throw new ExpressionSyntaxException(
-                expression, position, line, column, "Unexpected character."
-        );
+        throw new ExpressionSyntaxException(expression, position, line, column, "Unexpected character.");
     }
 
     @NotNull
@@ -241,8 +252,14 @@ final class Lexer {
                 FILTER:
                 for (Operator operator : operators) {
                     OperatorAssociativity operatorAssociativity = operator.getAssociativity();
-                    if (!OperatorAssociativity.LEFT.equals(operatorAssociativity) && !OperatorAssociativity.RIGHT.equals(operatorAssociativity)) {
-                        throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "Unsupported operator.");
+                    if (!OperatorAssociativity.LEFT.equals(operatorAssociativity)
+                            && !OperatorAssociativity.RIGHT.equals(operatorAssociativity)) {
+                        throw new ExpressionSyntaxException(
+                                expression,
+                                token.getPosition(),
+                                token.getLine(),
+                                token.getColumn(),
+                                "Unsupported operator.");
                     }
                     OperatorArity operatorArity = operator.getArity();
                     final int arity = operatorArity.getArity();
@@ -255,8 +272,7 @@ final class Lexer {
                         case UNARY:
                             // arity always 1
                             left = right = arity;
-                            if (OperatorAssociativity.LEFT.equals(operatorAssociativity))
-                            {
+                            if (OperatorAssociativity.LEFT.equals(operatorAssociativity)) {
                                 leftRequiredTypes = new LinkedHashSet<>();
                                 leftRequiredTypes.add(TokenType.NUMBER);
                                 leftRequiredTypes.add(TokenType.IDENTIFIER);
@@ -269,7 +285,8 @@ final class Lexer {
                                     Token leftToken = tokens.get(i - 1);
                                     if (TokenType.OPERATOR.equals(leftToken.getType())) {
                                         Operator leftOperator = (Operator) leftToken.getValue();
-                                        if (!OperatorArity.UNARY.equals(leftOperator.getArity()) || !operatorAssociativity.equals(leftOperator.getAssociativity())) {
+                                        if (!OperatorArity.UNARY.equals(leftOperator.getArity())
+                                                || !operatorAssociativity.equals(leftOperator.getAssociativity())) {
                                             continue;
                                         }
                                     }
@@ -326,7 +343,12 @@ final class Lexer {
                             }
                             break;
                         default:
-                            throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "Unsupported operator.");
+                            throw new ExpressionSyntaxException(
+                                    expression,
+                                    token.getPosition(),
+                                    token.getLine(),
+                                    token.getColumn(),
+                                    "Unsupported operator.");
                     }
                     //noinspection ConstantValue
                     if (left == 0 && right == 0) {
@@ -365,11 +387,17 @@ final class Lexer {
                     if (current == null) {
                         current = operator;
                     } else {
-                        throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "operators with multiple similar definitions.");
+                        throw new ExpressionSyntaxException(
+                                expression,
+                                token.getPosition(),
+                                token.getLine(),
+                                token.getColumn(),
+                                "operators with multiple similar definitions.");
                     }
                 }
                 if (current == null) {
-                    throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "Invalid operator.");
+                    throw new ExpressionSyntaxException(
+                            expression, token.getPosition(), token.getLine(), token.getColumn(), "Invalid operator.");
                 }
                 token.setValue(current);
             }
@@ -412,7 +440,12 @@ final class Lexer {
                     while (true) {
                         Token peeked = stack.peek();
                         if (stack.isEmpty()) {
-                            throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "Unexpected character.");
+                            throw new ExpressionSyntaxException(
+                                    expression,
+                                    token.getPosition(),
+                                    token.getLine(),
+                                    token.getColumn(),
+                                    "Unexpected character.");
                         }
                         if (peeked.getType() == TokenType.L_PAREN) {
                             stack.pop();
@@ -428,12 +461,14 @@ final class Lexer {
                 case OPERATOR:
                     Operator current = (Operator) token.getValue();
                     Token peeked;
-                    while (!stack.isEmpty() && (peeked = stack.peek()) != null && peeked.getType() != TokenType.L_PAREN) {
+                    while (!stack.isEmpty()
+                            && (peeked = stack.peek()) != null
+                            && peeked.getType() != TokenType.L_PAREN) {
                         Operator last = (Operator) peeked.getValue();
-                        if ((OperatorAssociativity.LEFT.equals(last.getAssociativity()) &&
-                                current.getPrecedence() <= last.getPrecedence()) ||
-                                (!OperatorAssociativity.LEFT.equals(last.getAssociativity()) &&
-                                        current.getPrecedence() < last.getPrecedence())) {
+                        if ((OperatorAssociativity.LEFT.equals(last.getAssociativity())
+                                        && current.getPrecedence() <= last.getPrecedence())
+                                || (!OperatorAssociativity.LEFT.equals(last.getAssociativity())
+                                        && current.getPrecedence() < last.getPrecedence())) {
                             rpn.add(stack.pop());
                         } else {
                             break;
@@ -442,7 +477,8 @@ final class Lexer {
                     stack.push(token);
                     break;
                 default:
-                    throw new ExpressionSyntaxException(expression, token.getPosition(), token.getLine(), token.getColumn(), "Unsupported token.");
+                    throw new ExpressionSyntaxException(
+                            expression, token.getPosition(), token.getLine(), token.getColumn(), "Unsupported token.");
             }
         }
         while (!stack.isEmpty()) {
@@ -457,11 +493,14 @@ final class Lexer {
 
         @NotNull
         private final TokenType type;
+
         private final int position;
         private final int line;
         private final int column;
+
         @NotNull
         private final String literal;
+
         @NotNull
         @Setter(AccessLevel.PRIVATE)
         private Object value;

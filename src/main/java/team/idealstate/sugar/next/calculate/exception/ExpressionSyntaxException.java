@@ -37,7 +37,8 @@ public class ExpressionSyntaxException extends ExpressionException {
         this.column = column;
     }
 
-    public ExpressionSyntaxException(String expression, int position, int line, int column, String message, Throwable cause) {
+    public ExpressionSyntaxException(
+            String expression, int position, int line, int column, String message, Throwable cause) {
         super(makeMessage(expression, position, line, column, message), cause);
         this.expression = expression;
         this.line = line;
@@ -52,7 +53,8 @@ public class ExpressionSyntaxException extends ExpressionException {
     }
 
     protected ExpressionSyntaxException(
-            String expression, int position,
+            String expression,
+            int position,
             int line,
             int column,
             String message,
@@ -70,6 +72,7 @@ public class ExpressionSyntaxException extends ExpressionException {
     }
 
     private static String makeMessage(String expression, int position, int line, int column, String message) {
-        return message + " (\"" + expression + "\" at position " + position + " line " + line + " column " + column + ')';
+        return message + " (\"" + expression + "\" at position " + position + " line " + line + " column " + column
+                + ')';
     }
 }
