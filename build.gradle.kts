@@ -1,3 +1,4 @@
+import com.diffplug.spotless.LineEnding
 import org.jreleaser.model.Active
 
 plugins {
@@ -113,6 +114,10 @@ jreleaser {
             }
         }
     }
+}
+
+spotless {
+    lineEndings = LineEnding.GIT_ATTRIBUTES_FAST_ALLSAME
 }
 
 tasks.register("doDeploy") {
