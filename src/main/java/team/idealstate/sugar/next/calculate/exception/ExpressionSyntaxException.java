@@ -30,46 +30,46 @@ public class ExpressionSyntaxException extends ExpressionException {
     private final int line;
     private final int column;
 
-    public ExpressionSyntaxException(String expression, int line, int column, String message) {
-        super(makeMessage(expression, line, column, message));
+    public ExpressionSyntaxException(String expression, int position, int line, int column, String message) {
+        super(makeMessage(expression, position, line, column, message));
         this.expression = expression;
         this.line = line;
         this.column = column;
     }
 
-    public ExpressionSyntaxException(String expression, int line, int column, String message, Throwable cause) {
-        super(makeMessage(expression, line, column, message), cause);
+    public ExpressionSyntaxException(String expression, int position, int line, int column, String message, Throwable cause) {
+        super(makeMessage(expression, position, line, column, message), cause);
         this.expression = expression;
         this.line = line;
         this.column = column;
     }
 
-    public ExpressionSyntaxException(String expression, int line, int column, Throwable cause) {
-        super(makeMessage(expression, line, column), cause);
+    public ExpressionSyntaxException(String expression, int position, int line, int column, Throwable cause) {
+        super(makeMessage(expression, position, line, column), cause);
         this.expression = expression;
         this.line = line;
         this.column = column;
     }
 
     protected ExpressionSyntaxException(
-            String expression,
+            String expression, int position,
             int line,
             int column,
             String message,
             Throwable cause,
             boolean enableSuppression,
             boolean writableStackTrace) {
-        super(makeMessage(expression, line, column, message), cause, enableSuppression, writableStackTrace);
+        super(makeMessage(expression, position, line, column, message), cause, enableSuppression, writableStackTrace);
         this.expression = expression;
         this.line = line;
         this.column = column;
     }
 
-    private static String makeMessage(String expression, int line, int column) {
-        return makeMessage(expression, line, column, "");
+    private static String makeMessage(String expression, int position, int line, int column) {
+        return makeMessage(expression, position, line, column, "");
     }
 
-    private static String makeMessage(String expression, int line, int column, String message) {
-        return message + "(\"" + expression + "\" at line " + line + " column " + column + ')';
+    private static String makeMessage(String expression, int position, int line, int column, String message) {
+        return message + " (\"" + expression + "\" at position " + position + " line " + line + " column " + column + ')';
     }
 }

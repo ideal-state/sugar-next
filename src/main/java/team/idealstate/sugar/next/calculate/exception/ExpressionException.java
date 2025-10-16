@@ -18,7 +18,7 @@ package team.idealstate.sugar.next.calculate.exception;
 
 import team.idealstate.sugar.next.exception.SugarNextException;
 
-public abstract class ExpressionException extends SugarNextException {
+public class ExpressionException extends SugarNextException {
     private static final long serialVersionUID = 5327302324147703837L;
 
     public ExpressionException() {
